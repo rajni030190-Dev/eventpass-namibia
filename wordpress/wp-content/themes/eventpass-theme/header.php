@@ -88,15 +88,21 @@
                 <?php if ( is_user_logged_in() ) : 
                     $curr_user = wp_get_current_user();
                     $short_name = explode(' ', trim($curr_user->display_name ?: $curr_user->user_login))[0];
+                    $dash_url = home_url('/customer-dashboard');
+                    if (current_user_can('manage_options')) {
+                        $dash_url = home_url('/admin-dashboard');
+                    } elseif (in_array('ep_organiser', (array)$curr_user->roles) || in_array('event_organiser', (array)$curr_user->roles)) {
+                        $dash_url = home_url('/organiser-dashboard');
+                    }
                 ?>
-                    <a href="<?php echo esc_url(home_url('/customer-dashboard')); ?>" class="ep-btn ep-btn-secondary ep-btn-sm">
+                    <a href="<?php echo esc_url($dash_url); ?>" class="ep-btn ep-btn-secondary ep-btn-sm">
                         <span>👤 <?php echo esc_html( $short_name ); ?></span>
                     </a>
-                    <a href="<?php echo esc_url( wp_logout_url( home_url('/customer-login?loggedout=1') ) ); ?>" class="ep-btn ep-btn-sm" style="background: rgba(239,68,68,0.1); color: #DC2626; border: 1px solid rgba(239,68,68,0.25);">
+                    <a href="<?php echo esc_url( wp_logout_url( home_url('/login?loggedout=1') ) ); ?>" class="ep-btn ep-btn-sm" style="background: rgba(239,68,68,0.1); color: #DC2626; border: 1px solid rgba(239,68,68,0.25);">
                         <span>Sign Out</span>
                     </a>
                 <?php else : ?>
-                    <a href="<?php echo esc_url(home_url('/customer-login')); ?>" class="ep-btn ep-btn-secondary ep-btn-sm">
+                    <a href="<?php echo esc_url(home_url('/login')); ?>" class="ep-btn ep-btn-secondary ep-btn-sm">
                         <span>Sign In</span>
                     </a>
                 <?php endif; ?>
@@ -129,15 +135,23 @@
                     <a href="<?php echo esc_url(home_url('/list-your-event')); ?>" class="ep-btn ep-btn-outline ep-btn-md" style="width: 100%; justify-content: center; border-color: var(--ep-teal); color: var(--ep-teal-dark);">
                         + List Your Event
                     </a>
-                    <?php if ( is_user_logged_in() ) : ?>
-                        <a href="<?php echo esc_url(home_url('/customer-dashboard')); ?>" class="ep-btn ep-btn-secondary ep-btn-md" style="width: 100%; justify-content: center;">
-                            👤 My Account (<?php echo esc_html( wp_get_current_user()->display_name ); ?>)
+                    <?php if ( is_user_logged_in() ) : 
+                        $m_user = wp_get_current_user();
+                        $m_dash = home_url('/customer-dashboard');
+                        if (current_user_can('manage_options')) {
+                            $m_dash = home_url('/admin-dashboard');
+                        } elseif (in_array('ep_organiser', (array)$m_user->roles) || in_array('event_organiser', (array)$m_user->roles)) {
+                            $m_dash = home_url('/organiser-dashboard');
+                        }
+                    ?>
+                        <a href="<?php echo esc_url($m_dash); ?>" class="ep-btn ep-btn-secondary ep-btn-md" style="width: 100%; justify-content: center;">
+                            👤 My Account (<?php echo esc_html( $m_user->display_name ?: $m_user->user_login ); ?>)
                         </a>
-                        <a href="<?php echo esc_url( wp_logout_url( home_url('/customer-login?loggedout=1') ) ); ?>" class="ep-btn ep-btn-md" style="width: 100%; justify-content: center; background: rgba(239,68,68,0.1); color: #DC2626; border: 1px solid rgba(239,68,68,0.25);">
+                        <a href="<?php echo esc_url( wp_logout_url( home_url('/login?loggedout=1') ) ); ?>" class="ep-btn ep-btn-md" style="width: 100%; justify-content: center; background: rgba(239,68,68,0.1); color: #DC2626; border: 1px solid rgba(239,68,68,0.25);">
                             🚪 Sign Out
                         </a>
                     <?php else : ?>
-                        <a href="<?php echo esc_url(home_url('/customer-login')); ?>" class="ep-btn ep-btn-secondary ep-btn-md" style="width: 100%; justify-content: center;">
+                        <a href="<?php echo esc_url(home_url('/login')); ?>" class="ep-btn ep-btn-secondary ep-btn-md" style="width: 100%; justify-content: center;">
                             👤 Sign In / Register
                         </a>
                     <?php endif; ?>

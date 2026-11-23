@@ -9,7 +9,7 @@
 
 // 1. Strict Administrator RBAC Guard
 if (!is_user_logged_in()) {
-    wp_redirect(home_url('/customer-login?redirect_to=' . urlencode(home_url('/admin-dashboard'))));
+    wp_redirect(home_url('/login?redirect_to=' . urlencode(home_url('/admin-dashboard'))));
     exit;
 }
 

@@ -132,6 +132,14 @@ function eventpass_format_price($amount) {
 }
 
 /**
+ * Support /login as canonical alias for the authentication portal
+ */
+function ep_login_rewrite_rules() {
+    add_rewrite_rule('^login/?$', 'index.php?pagename=customer-login', 'top');
+}
+add_action('init', 'ep_login_rewrite_rules');
+
+/**
  * Custom template tags and filters
  */
 require_once EVENTPASS_THEME_DIR . '/template-parts/template-tags.php';

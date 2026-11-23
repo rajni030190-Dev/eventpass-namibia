@@ -168,10 +168,6 @@ get_header();
             <div style="text-align: center; margin-top: 1rem; font-size: 0.85rem;">
                 <a href="<?php echo esc_url(home_url('/organiser-registration')); ?>" style="color: var(--ep-navy); text-decoration: underline;">Are you an Event Organiser? Apply here &rarr;</a>
             </div>
-        <?php else : ?>
-            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--ep-slate-500);">
-                <span>Default Admin: <strong>admin</strong> | <strong>admin@eventpass.com.na</strong></span>
-            </div>
         <?php endif; ?>
     </div>
 </div>
