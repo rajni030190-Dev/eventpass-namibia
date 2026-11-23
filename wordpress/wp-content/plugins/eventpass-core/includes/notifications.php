@@ -407,11 +407,35 @@ add_action('eventpass_order_completed', ['EventPass_Notification_Engine', 'notif
 add_action('transition_post_status', ['EventPass_Notification_Engine', 'handle_post_transition'], 10, 3);
 
 /**
+ * Production SMTP Dispatcher
+ * Enables zero-plugin SMTP configuration via wp-config.php constants
+ * Supported by any standard SMTP provider (SendGrid, Brevo, AWS SES, Gmail, cPanel Mail)
+ */
+add_action('phpmailer_init', function($phpmailer) {
+    if (defined('EP_SMTP_HOST') && !empty(EP_SMTP_HOST)) {
+        $phpmailer->isSMTP();
+        $phpmailer->Host       = EP_SMTP_HOST;
+        $phpmailer->SMTPAuth   = defined('EP_SMTP_AUTH') ? EP_SMTP_AUTH : true;
+        $phpmailer->Port       = defined('EP_SMTP_PORT') ? EP_SMTP_PORT : 587;
+        $phpmailer->Username   = defined('EP_SMTP_USER') ? EP_SMTP_USER : '';
+        $phpmailer->Password   = defined('EP_SMTP_PASS') ? EP_SMTP_PASS : '';
+        $phpmailer->SMTPSecure = defined('EP_SMTP_SECURE') ? EP_SMTP_SECURE : 'tls';
+        $phpmailer->From       = defined('EP_SMTP_FROM') ? EP_SMTP_FROM : 'no-reply@eventpass.com.na';
+        $phpmailer->FromName   = defined('EP_SMTP_FROM_NAME') ? EP_SMTP_FROM_NAME : 'EventPass Namibia';
+    }
+});
+
+/**
  * Local Development & Resilient Mail Delivery Interceptor
  * Prevents "The email could not be sent" fatal errors on local installations without active MTA.
  * Logs all system and core password-recovery emails to the Notification Audit Trail.
  */
 add_filter('pre_wp_mail', function($null, $atts) {
+    // If production SMTP is explicitly configured, let PHPMailer handle real transmission
+    if (defined('EP_SMTP_HOST') && !empty(EP_SMTP_HOST)) {
+        return $null;
+    }
+
     $is_local = in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', 'localhost:8080', '127.0.0.1:8080']) || empty(ini_get('SMTP')) || ini_get('SMTP') === 'localhost';
     if ($is_local) {
         $to_str = is_array($atts['to'] ?? '') ? implode(', ', $atts['to']) : ($atts['to'] ?? '');
