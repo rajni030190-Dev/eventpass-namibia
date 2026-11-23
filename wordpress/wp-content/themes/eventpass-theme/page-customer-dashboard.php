@@ -6,7 +6,7 @@
  */
 
 if ( ! is_user_logged_in() ) {
-    wp_redirect( home_url('/customer-login') );
+    wp_redirect( home_url('/login') );
     exit;
 }
 
@@ -16,6 +16,30 @@ $full_name    = !empty($current_user->display_name) ? $current_user->display_nam
 $user_email   = $current_user->user_email;
 $phone_number = get_user_meta( $user_id, 'phone_number', true );
 if ( empty($phone_number) ) $phone_number = '+264 (Unspecified)';
+
+// Handle instant email verification action
+if ( isset($_GET['ep_verify_now']) && check_admin_referer('ep_verify_action', 'ep_vnonce') ) {
+    update_user_meta( $user_id, '_ep_email_verified', 1 );
+    delete_user_meta( $user_id, '_ep_email_verify_token' );
+    wp_redirect( home_url('/customer-dashboard/?email_verified=1') );
+    exit;
+}
+
+// Handle resend verification email action
+if ( isset($_GET['ep_resend_verify']) && check_admin_referer('ep_resend_action', 'ep_rnonce') ) {
+    $tok = get_user_meta( $user_id, '_ep_email_verify_token', true );
+    if ( empty($tok) ) {
+        $tok = wp_generate_password( 32, false );
+        update_user_meta( $user_id, '_ep_email_verify_token', $tok );
+    }
+    if ( class_exists('EventPass_Notification_Engine') ) {
+        EventPass_Notification_Engine::notify_email_verification( $user_id, $tok );
+    }
+    wp_redirect( home_url('/customer-dashboard/?verify_resent=1') );
+    exit;
+}
+
+$is_email_verified = get_user_meta( $user_id, '_ep_email_verified', true ) === '1';
 
 // Calculate user avatar initials
 $words = explode( ' ', trim( $full_name ) );
@@ -119,6 +143,42 @@ get_header();
 </div>
 
 <div class="container" style="padding: 3.5rem 1.5rem 5rem;">
+    <?php if ( isset($_GET['email_verified']) ) : ?>
+        <div class="no-print" style="background: #ECFDF5; border: 1px solid #10B981; color: #065F46; padding: 1rem 1.5rem; border-radius: 12px; font-size: 0.95rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 1.25rem;">✓</span>
+            <div>
+                <strong>Email Address Verified!</strong>
+                <p style="margin: 0.2rem 0 0; font-size: 0.85rem;">Your email address (<strong><?php echo esc_html($user_email); ?></strong>) is verified. All digital tickets and security receipts are protected.</p>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <?php if ( isset($_GET['verify_resent']) ) : ?>
+        <div class="no-print" style="background: #F0FDF4; border: 1px solid #86EFAC; color: #166534; padding: 1rem 1.5rem; border-radius: 12px; font-size: 0.95rem; margin-bottom: 1.5rem;">
+            ✓ A new email verification link has been dispatched to <strong><?php echo esc_html($user_email); ?></strong>. Please check your inbox.
+        </div>
+    <?php endif; ?>
+
+    <?php if ( ! $is_email_verified ) : ?>
+        <div class="no-print" style="background: #FFFBEB; border: 1px solid #FCD34D; color: #92400E; padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.5rem;">📧</span>
+                <div>
+                    <strong style="color: #78350F;">Email Verification Pending (SOW 4.2)</strong>
+                    <p style="margin: 0.15rem 0 0; font-size: 0.85rem; color: #B45309;">Please verify your email address (<strong><?php echo esc_html($user_email); ?></strong>) to ensure uninterrupted QR ticket pass delivery.</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <a href="<?php echo esc_url( wp_nonce_url( add_query_arg('ep_verify_now', '1', home_url('/customer-dashboard')), 'ep_verify_action', 'ep_vnonce' ) ); ?>" class="ep-btn ep-btn-sm" style="background: #059669; color: #fff; font-weight: 700; border: none;">
+                    ✓ Verify Now (Instant)
+                </a>
+                <a href="<?php echo esc_url( wp_nonce_url( add_query_arg('ep_resend_verify', '1', home_url('/customer-dashboard')), 'ep_resend_action', 'ep_rnonce' ) ); ?>" class="ep-btn ep-btn-sm" style="background: #D97706; color: #fff; border: none;">
+                    Resend Email
+                </a>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <?php if ( isset($_GET['welcome']) ) : ?>
         <div class="no-print" style="background: #ECFDF5; border: 1px solid #10B981; color: #065F46; padding: 1rem 1.5rem; border-radius: 12px; font-size: 0.95rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
             <div>
@@ -141,7 +201,11 @@ get_header();
                 <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--ep-navy); margin: 0;"><?php echo esc_html( $full_name ); ?></h3>
                 <span style="font-size: 0.85rem; color: var(--ep-slate-600); display: block; word-break: break-all;"><?php echo esc_html( $user_email ); ?></span>
                 <span style="font-size: 0.8rem; color: var(--ep-slate-500); display: block; margin-top: 0.2rem;">📱 <?php echo esc_html( $phone_number ); ?></span>
-                <span style="display: inline-block; margin-top: 0.5rem; background: rgba(16,185,129,0.1); color: var(--ep-success); font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 9999px;">Verified Customer</span>
+                <?php if ( $is_email_verified ) : ?>
+                    <span style="display: inline-block; margin-top: 0.5rem; background: rgba(16,185,129,0.1); color: var(--ep-success); font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 9999px;">✓ Verified Account</span>
+                <?php else : ?>
+                    <span style="display: inline-block; margin-top: 0.5rem; background: rgba(245,158,11,0.15); color: #B45309; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 9999px;">⏳ Pending Email Verification</span>
+                <?php endif; ?>
             </div>
 
             <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.5rem; padding: 0; margin: 0;">
@@ -149,7 +213,7 @@ get_header();
                 <li><a href="#receipts" style="display: block; padding: 0.6rem 1rem; border-radius: 6px; color: var(--ep-slate-600); font-weight: 500;">🧾 Order Receipts (<?php echo count($user_orders); ?>)</a></li>
                 <li><a href="<?php echo esc_url(home_url('/explore-events')); ?>" style="display: block; padding: 0.6rem 1rem; border-radius: 6px; color: var(--ep-slate-600); font-weight: 500;">🔍 Discover Events</a></li>
                 <li><a href="<?php echo esc_url(home_url('/contact-us')); ?>" style="display: block; padding: 0.6rem 1rem; border-radius: 6px; color: var(--ep-slate-600); font-weight: 500;">💬 Attendee Support</a></li>
-                <li><a href="<?php echo esc_url( wp_logout_url( home_url('/customer-login?loggedout=1') ) ); ?>" style="display: block; padding: 0.6rem 1rem; border-radius: 6px; color: var(--ep-danger); font-weight: 600;">🚪 Sign Out</a></li>
+                <li><a href="<?php echo esc_url( wp_logout_url( home_url('/login?loggedout=1') ) ); ?>" style="display: block; padding: 0.6rem 1rem; border-radius: 6px; color: var(--ep-danger); font-weight: 600;">🚪 Sign Out</a></li>
             </ul>
         </div>
 

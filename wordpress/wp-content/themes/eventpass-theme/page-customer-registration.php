@@ -62,6 +62,17 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_reg_nonce']) ) {
                     update_user_meta( $user_id, 'phone_number', $phone );
                 }
 
+                // SOW 4.2: Email verification token & initial unverified status
+                $verify_token = wp_generate_password( 32, false );
+                update_user_meta( $user_id, '_ep_email_verified', 0 );
+                update_user_meta( $user_id, '_ep_email_verify_token', $verify_token );
+
+                // SOW 3 & 12: Dispatch automated welcome & email verification notifications
+                if ( class_exists('EventPass_Notification_Engine') ) {
+                    EventPass_Notification_Engine::notify_customer_welcome( $user_id );
+                    EventPass_Notification_Engine::notify_email_verification( $user_id, $verify_token );
+                }
+
                 // Auto sign-in new customer
                 wp_set_current_user( $user_id );
                 wp_set_auth_cookie( $user_id, true );
@@ -128,7 +139,7 @@ get_header();
 
         <div style="text-align: center; margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--ep-slate-100); font-size: 0.9rem; color: var(--ep-slate-600);">
             Already have an account? 
-            <a href="<?php echo esc_url(home_url('/customer-login')); ?>" style="color: var(--ep-teal-dark); font-weight: 700;">Sign In</a>
+            <a href="<?php echo esc_url(home_url('/login')); ?>" style="color: var(--ep-teal-dark); font-weight: 700;">Sign In</a>
         </div>
     </div>
 </div>
