@@ -42,6 +42,17 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_org_app_nonce']) 
                 update_post_meta( $app_post_id, '_ep_org_category', $category );
                 update_post_meta( $app_post_id, '_ep_app_status', 'pending' );
 
+                // SOW 4.2 & Requirement 3: Independent Organiser Email Verification Token
+                $org_verify_token = wp_generate_password( 32, false );
+                update_post_meta( $app_post_id, '_ep_org_email_verified', 0 );
+                update_post_meta( $app_post_id, '_ep_org_email_verify_token', $org_verify_token );
+
+                // Dispatch automated verification and admin alert notifications
+                if ( class_exists('EventPass_Notification_Engine') ) {
+                    EventPass_Notification_Engine::notify_organiser_email_verification( $app_post_id, $org_verify_token );
+                    EventPass_Notification_Engine::notify_admin_new_organiser_app( $app_post_id );
+                }
+
                 $app_submitted = true;
             } else {
                 $app_error = $app_post_id->get_error_message();

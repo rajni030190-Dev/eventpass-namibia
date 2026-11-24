@@ -29,7 +29,7 @@ if (!function_exists('ep_get_role_destination_url')) {
 }
 
 // -----------------------------------------------------------------------------
-// 1. Action: Verify Email Address (SOW 4.2)
+// 1. Action: Verify Customer Email Address (SOW 4.2)
 // -----------------------------------------------------------------------------
 if ($action === 'verify_email') {
     $token = sanitize_text_field($_GET['token'] ?? '');
@@ -50,6 +50,26 @@ if ($action === 'verify_email') {
         exit;
     } else {
         $login_error = 'This email verification link is invalid or has already been used.';
+        $action = 'login';
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 1b. Action: Verify Organiser Business Email (Independent of Admin Vetting)
+// -----------------------------------------------------------------------------
+if ($action === 'verify_org_email') {
+    $token  = sanitize_text_field($_GET['token'] ?? '');
+    $app_id = intval($_GET['app_id'] ?? 0);
+    $stored_token = get_post_meta($app_id, '_ep_org_email_verify_token', true);
+
+    if ($app_id > 0 && !empty($token) && hash_equals((string)$stored_token, (string)$token)) {
+        update_post_meta($app_id, '_ep_org_email_verified', 1);
+        delete_post_meta($app_id, '_ep_org_email_verify_token');
+
+        $login_success = '✓ Organiser business email verified successfully! Your application has been flagged as email-verified for administrative vetting.';
+        $action = 'login';
+    } else {
+        $login_error = 'This organiser email verification link is invalid or has already been used.';
         $action = 'login';
     }
 }
@@ -237,6 +257,12 @@ get_header();
             <?php endif; ?>
 
             <?php if (!empty($login_success)) : ?>
+                <div style="background: #ECFDF5; border: 1px solid #10B981; color: #065F46; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    <?php echo esc_html($login_success); ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($login_success)) : ?>
                 <div style="background: #F0FDF4; border: 1px solid #86EFAC; color: #166534; padding: 1rem 1.25rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1.5rem;">
                     <strong>✓ Request Sent</strong>
                     <p style="margin: 0.35rem 0 0;"><?php echo esc_html($login_success); ?></p>
@@ -288,6 +314,12 @@ get_header();
                 </div>
             <?php endif; ?>
 
+            <?php if (!empty($login_success)) : ?>
+                <div style="background: #ECFDF5; border: 1px solid #10B981; color: #065F46; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    <?php echo esc_html($login_success); ?>
+                </div>
+            <?php endif; ?>
+
             <?php if ($rp_invalid) : ?>
                 <div style="background: #FFFBEB; border: 1px solid #FCD34D; color: #92400E; padding: 1.25rem; border-radius: 8px; font-size: 0.92rem; text-align: center;">
                     <p style="margin: 0 0 1rem;">⚠️ This password reset link has expired or has already been used.</p>
@@ -336,6 +368,12 @@ get_header();
                 <div style="background: #FEF2F2; border: 1px solid #FCA5A5; color: #991B1B; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
                     <span>⚠️</span>
                     <span><?php echo esc_html($login_error); ?></span>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($login_success)) : ?>
+                <div style="background: #ECFDF5; border: 1px solid #10B981; color: #065F46; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    <?php echo esc_html($login_success); ?>
                 </div>
             <?php endif; ?>
 

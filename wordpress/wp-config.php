@@ -42,6 +42,23 @@ define( 'WP_DEBUG_DISPLAY', false );
 define( 'AUTOMATIC_UPDATER_DISABLED', true );
 define( 'WP_AUTO_UPDATE_CORE', false );
 
+// =============================================================================
+// EVENTPASS NAMIBIA - BREVO PRODUCTION SMTP CONFIGURATION (SOW MODULE 3 & 4)
+// Brevo (formerly Sendinblue) is the EXCLUSIVE production SMTP provider.
+// Standard endpoint: smtp-relay.brevo.com via TLS over Port 587.
+// In local development (localhost:8080), without credentials configured,
+// the Resilient Local Mail Interceptor captures all emails safely into the audit trail.
+// When deploying to production, provide the authenticated Brevo credentials below
+// or configure via environment variables (BREVO_SMTP_USER, BREVO_SMTP_KEY).
+// =============================================================================
+define( 'BREVO_SMTP_HOST', getenv('BREVO_SMTP_HOST') ?: 'smtp-relay.brevo.com' );
+define( 'BREVO_SMTP_PORT', getenv('BREVO_SMTP_PORT') ? intval(getenv('BREVO_SMTP_PORT')) : 587 );
+define( 'BREVO_SMTP_SECURE', getenv('BREVO_SMTP_SECURE') ?: 'tls' );
+define( 'BREVO_SMTP_USER', getenv('BREVO_SMTP_USER') ?: '' ); // Provide authenticated Brevo SMTP login
+define( 'BREVO_SMTP_KEY', getenv('BREVO_SMTP_KEY') ?: '' );   // Provide Brevo SMTP master key
+define( 'BREVO_SENDER_EMAIL', getenv('BREVO_SENDER_EMAIL') ?: 'no-reply@eventpass.com.na' );
+define( 'BREVO_SENDER_NAME', getenv('BREVO_SENDER_NAME') ?: 'EventPass Namibia' );
+
 /* That's all, stop editing! Happy publishing. */
 
 /** Absolute path to the WordPress directory. */

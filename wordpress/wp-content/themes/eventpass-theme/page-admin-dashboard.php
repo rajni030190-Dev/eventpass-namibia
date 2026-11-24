@@ -201,6 +201,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_admin_nonce'])) {
                 $action_type = 'warning';
             }
         }
+
+        // F. Brevo Production SMTP Diagnostic Test
+        elseif ($admin_action === 'test_brevo_smtp') {
+            $test_target = sanitize_email($_POST['test_email'] ?? '');
+            if (!empty($test_target) && is_email($test_target)) {
+                if (class_exists('EventPass_Brevo_Mailer')) {
+                    $test_res = EventPass_Brevo_Mailer::send_test_email($test_target);
+                    $action_msg  = $test_res['message'];
+                    $action_type = $test_res['success'] ? 'success' : 'error';
+                } else {
+                    $action_msg  = 'Brevo Mailer class is not loaded.';
+                    $action_type = 'error';
+                }
+            } else {
+                $action_msg  = 'Please provide a valid destination email address for Brevo testing.';
+                $action_type = 'error';
+            }
+        }
     }
 }
 
@@ -298,7 +316,8 @@ $recent_orders = get_posts([
     'order'          => 'DESC',
 ]);
 
-$notification_logs = class_exists('EventPass_Notification_Engine') ? EventPass_Notification_Engine::get_recent_logs(15) : [];
+$notification_logs = class_exists('EventPass_Notification_Engine') ? EventPass_Notification_Engine::get_recent_logs(20) : [];
+$brevo_diag        = class_exists('EventPass_Brevo_Mailer') ? EventPass_Brevo_Mailer::validate_config() : null;
 
 get_header();
 ?>
@@ -555,6 +574,13 @@ get_header();
                                         <td style="padding: 1rem;">
                                             <div><?php echo esc_html($contact); ?></div>
                                             <div style="font-size: 0.8rem; color: #64748B;"><?php echo esc_html($email); ?> &bull; <?php echo esc_html($phone); ?></div>
+                                            <?php 
+                                            $is_org_email_v = get_post_meta($porg->ID, '_ep_org_email_verified', true) == '1';
+                                            if ($is_org_email_v) : ?>
+                                                <span style="display:inline-block; margin-top:4px; background:rgba(16,185,129,0.1); color:#059669; font-size:0.75rem; font-weight:700; padding:1px 6px; border-radius:4px;">Email Verified ✓</span>
+                                            <?php else : ?>
+                                                <span style="display:inline-block; margin-top:4px; background:rgba(245,158,11,0.12); color:#B45309; font-size:0.75rem; font-weight:700; padding:1px 6px; border-radius:4px;">Email Verification Pending ⏳</span>
+                                            <?php endif; ?>
                                         </td>
                                         <td style="padding: 1rem;">
                                             <div>📍 <?php echo esc_html(ucfirst($town)); ?></div>
@@ -746,14 +772,58 @@ get_header();
 
         <!-- 5. Transactional Notification Audit Trail (SOW Module 15) -->
         <div style="background: #fff; border: 1px solid var(--ep-slate-200); border-radius: 16px; overflow: hidden; box-shadow: var(--ep-shadow-sm);">
-            <div style="padding: 1.5rem 2rem; background: #1E293B; color: #fff; display: flex; justify-content: space-between; align-items: center;">
+            <div style="padding: 1.5rem 2rem; background: #1E293B; color: #fff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                 <div>
                     <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0 0 0.25rem 0;">Notification & Email Engine Audit Trail</h2>
                     <p style="color: #94A3B8; font-size: 0.88rem; margin: 0;">Comprehensive verification record of all customer passes, promoter updates, and support enquiries.</p>
                 </div>
-                <span style="background: rgba(0,229,255,0.15); color: var(--ep-cyan); padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 800;">
-                    <?php echo count($notification_logs); ?> Recent Dispatches
-                </span>
+                <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                    <?php if ($brevo_diag && $brevo_diag['valid']) : ?>
+                        <span style="background: rgba(16,185,129,0.2); color: #34D399; border: 1px solid rgba(16,185,129,0.4); padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 800;">
+                            ✓ Brevo Production SMTP Active (587 TLS)
+                        </span>
+                    <?php else : ?>
+                        <span style="background: rgba(0,229,255,0.15); color: var(--ep-cyan); border: 1px solid rgba(0,229,255,0.3); padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 800;">
+                            ⚡ Local Interceptor Active (Brevo Standby)
+                        </span>
+                    <?php endif; ?>
+                    <span style="background: rgba(255,255,255,0.1); color: #E2E8F0; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">
+                        <?php echo count($notification_logs); ?> Recent Dispatches
+                    </span>
+                </div>
+            </div>
+
+            <!-- Brevo Production SMTP Diagnostics & Live Testing Sub-Panel -->
+            <div style="padding: 1.25rem 2rem; background: #F8FAFC; border-bottom: 1px solid var(--ep-slate-200);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                            <strong style="color: var(--ep-navy); font-size: 0.95rem;">Production SMTP Provider:</strong>
+                            <span style="background: #000; color: #00E5FF; padding: 2px 8px; border-radius: 4px; font-size: 0.82rem; font-weight: 800; font-family: monospace;">BREVO ONLY (smtp-relay.brevo.com:587 TLS)</span>
+                        </div>
+                        <div style="font-size: 0.82rem; color: #64748B; display: flex; gap: 1.2rem; flex-wrap: wrap;">
+                            <span>Sender: <strong><?php echo esc_html($brevo_diag['sender_name'] ?? 'EventPass Namibia'); ?> &lt;<?php echo esc_html($brevo_diag['sender_email'] ?? 'no-reply@eventpass.com.na'); ?>&gt;</strong></span>
+                            <span>Login: <code><?php echo esc_html($brevo_diag['user_masked'] ?? 'wp-config pending'); ?></code></span>
+                            <span>API Key: <code><?php echo esc_html($brevo_diag['key_status'] ?? 'wp-config pending'); ?></code></span>
+                        </div>
+                    </div>
+
+                    <!-- Direct Brevo Diagnostic Test Form -->
+                    <form method="POST" action="" style="display: flex; gap: 0.5rem; align-items: center; margin: 0;">
+                        <?php wp_nonce_field('ep_admin_action', 'ep_admin_nonce'); ?>
+                        <input type="hidden" name="ep_admin_action" value="test_brevo_smtp">
+                        <input type="email" name="test_email" placeholder="test-inbox@yourdomain.com" required style="padding: 6px 12px; font-size: 0.85rem; border: 1px solid #CBD5E1; border-radius: 6px; width: 230px;" value="<?php echo esc_attr($current_admin->user_email); ?>">
+                        <button type="submit" class="ep-btn ep-btn-sm" style="background: #0B1B3D; color: #00E5FF; border: 1px solid rgba(0,229,255,0.4); font-weight: 700; white-space: nowrap;">
+                            ⚡ Test Brevo SMTP
+                        </button>
+                    </form>
+                </div>
+
+                <?php if ($brevo_diag && !empty($brevo_diag['errors']) && $brevo_diag['configured']) : ?>
+                    <div style="margin-top: 0.75rem; padding: 0.5rem 1rem; background: #FEF2F2; border-left: 3px solid #EF4444; border-radius: 4px; font-size: 0.82rem; color: #991B1B;">
+                        <strong>Configuration Notice:</strong> <?php echo esc_html(implode(' | ', $brevo_diag['errors'])); ?>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <div style="padding: 1.5rem 2rem;">
@@ -767,12 +837,16 @@ get_header();
                                     <th style="padding: 0.75rem 1rem;">Recipient</th>
                                     <th style="padding: 0.75rem 1rem;">Subject Line</th>
                                     <th style="padding: 0.75rem 1rem;">Trigger Context</th>
+                                    <th style="padding: 0.75rem 1rem;">Dispatcher / Provider</th>
                                     <th style="padding: 0.75rem 1rem;">Sent Timestamp</th>
                                     <th style="padding: 0.75rem 1rem;">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($notification_logs as $log) : ?>
+                                <?php foreach ($notification_logs as $log) : 
+                                    $prov = $log['provider'] ?? ($log['status'] === 'dispatched_brevo' ? 'Brevo Production SMTP' : 'Local Interceptor (Brevo Standby)');
+                                    $st = $log['status'] ?? 'dispatched';
+                                ?>
                                     <tr style="border-bottom: 1px solid var(--ep-slate-200);">
                                         <td style="padding: 1rem;">
                                             <code style="color: var(--ep-navy); font-weight: 700;"><?php echo esc_html($log['to'] ?? ''); ?></code>
@@ -785,13 +859,30 @@ get_header();
                                                 <?php echo esc_html($log['context'] ?? 'general'); ?>
                                             </span>
                                         </td>
+                                        <td style="padding: 1rem; font-size: 0.82rem;">
+                                            <?php if (strpos($st, 'brevo') !== false) : ?>
+                                                <span style="color: #065F46; font-weight: 700;">📡 <?php echo esc_html($prov); ?></span>
+                                            <?php else : ?>
+                                                <span style="color: #0284C7; font-weight: 700;">🛡️ <?php echo esc_html($prov); ?></span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td style="padding: 1rem; font-size: 0.85rem; color: #64748B;">
                                             <?php echo esc_html($log['sent_at'] ?? ''); ?>
                                         </td>
                                         <td style="padding: 1rem;">
-                                            <span style="background: rgba(16,185,129,0.1); color: #065F46; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">
-                                                ✓ <?php echo esc_html(ucfirst($log['status'] ?? 'Dispatched')); ?>
-                                            </span>
+                                            <?php if ($st === 'dispatched_brevo') : ?>
+                                                <span style="background: rgba(16,185,129,0.12); color: #065F46; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">
+                                                    ✓ Brevo Sent
+                                                </span>
+                                            <?php elseif ($st === 'dispatched_local') : ?>
+                                                <span style="background: rgba(14,165,233,0.12); color: #0369A1; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">
+                                                    ⚡ Local Intercepted
+                                                </span>
+                                            <?php else : ?>
+                                                <span style="background: rgba(239,68,68,0.1); color: #DC2626; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">
+                                                    ✕ <?php echo esc_html(ucfirst($st)); ?>
+                                                </span>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
