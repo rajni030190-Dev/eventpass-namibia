@@ -57,7 +57,7 @@ define( 'BREVO_SMTP_SECURE', getenv('BREVO_SMTP_SECURE') ?: 'tls' );
 define( 'BREVO_SMTP_USER', getenv('BREVO_SMTP_USER') ?: '' ); // Provide authenticated Brevo SMTP login or configure via Admin Hub
 define( 'BREVO_SMTP_KEY', getenv('BREVO_SMTP_KEY') ?: '' );   // Provide Brevo SMTP master key or configure via Admin Hub
 define( 'BREVO_SENDER_EMAIL', getenv('BREVO_SENDER_EMAIL') ?: 'no-reply@eventpass.com.na' );
-define( 'BREVO_SENDER_NAME', getenv('BREVO_SENDER_NAME') ?: 'EventPass Namibia' );
+define( 'BREVO_SENDER_NAME', getenv('BREVO_SENDER_NAME') ?: 'EventPass from RainbooSoftmate' );
 
 
 /** Absolute path to the WordPress directory. */
