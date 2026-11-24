@@ -83,7 +83,8 @@ img {
 .ep-site-header {
   background: #ffffff;
   border-bottom: 1px solid var(--ep-slate-200);
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 1000;
   box-shadow: var(--ep-shadow-sm);
 }
@@ -1556,20 +1557,3 @@ img {
                 padding: 1rem 1.25rem;
             }
         }
-
-
-/* Hide WordPress Admin Bar and WP logo from frontend */
-#wpadminbar {
-    display: none !important;
-}
-html {
-    margin-top: 0 !important;
-}
-* html body {
-    margin-top: 0 !important;
-}
-@media screen and (max-width: 782px) {
-    html {
-        margin-top: 0 !important;
-    }
-}
