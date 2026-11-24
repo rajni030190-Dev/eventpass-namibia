@@ -140,6 +140,11 @@ function ep_login_rewrite_rules() {
 add_action('init', 'ep_login_rewrite_rules');
 
 /**
+ * Remove WordPress Admin Bar & WordPress Logo on frontend for all users
+ */
+add_filter('show_admin_bar', '__return_false');
+
+/**
  * Custom template tags and filters
  */
 require_once EVENTPASS_THEME_DIR . '/template-parts/template-tags.php';
