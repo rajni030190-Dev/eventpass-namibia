@@ -140,11 +140,24 @@ function ep_login_rewrite_rules() {
 add_action('init', 'ep_login_rewrite_rules');
 
 /**
- * Remove WordPress Admin Bar & WordPress Logo on frontend for all users
- */
-add_filter('show_admin_bar', '__return_false');
-
-/**
  * Custom template tags and filters
  */
 require_once EVENTPASS_THEME_DIR . '/template-parts/template-tags.php';
+
+/**
+ * White-Label & Admin Bar Customizations
+ */
+// 1. Remove WordPress Logo from the Admin Bar
+add_action('admin_bar_menu', function( $wp_admin_bar ) {
+    if ( is_object( $wp_admin_bar ) ) {
+        $wp_admin_bar->remove_node('wp-logo');
+    }
+}, 999);
+
+// 2. Hide Admin Bar on the front-end for a clean, white-label client portal
+add_filter('show_admin_bar', function( $show ) {
+    if ( ! is_admin() ) {
+        return false;
+    }
+    return $show;
+});
