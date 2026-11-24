@@ -46,7 +46,7 @@
 
 <div id="page" class="site">
     <!-- Top Announcement Strip -->
-    <div class="ep-top-bar" style="background: var(--ep-navy-deep); color: #94A3B8; font-size: 0.8rem; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+    <div class="ep-top-bar" style="background: var(--ep-navy-deep); color: #94A3B8; font-size: 0.75rem; padding: 0.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
         <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
             <div class="ep-top-left">
                 <span>🇳🇦 Namibia's Premier Online Event & Ticketing Marketplace</span>
