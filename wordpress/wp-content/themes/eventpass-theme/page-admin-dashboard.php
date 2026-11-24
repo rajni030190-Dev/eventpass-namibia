@@ -14,16 +14,27 @@ if (!is_user_logged_in()) {
 }
 
 if (!current_user_can('manage_options')) {
+    $current_u   = wp_get_current_user();
+    $logout_url  = wp_logout_url(home_url('/login?redirect_to=' . urlencode(home_url('/admin-dashboard'))));
+    $user_label  = esc_html($current_u->display_name ?: $current_u->user_login);
+    $user_email  = esc_html($current_u->user_email);
+
     wp_die(
-        '<div style="max-width:600px; margin:80px auto; font-family:-apple-system, sans-serif; text-align:center; padding:40px; background:#fff; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.1); border:1px solid #E2E8F0;">
+        '<div style="max-width:600px; margin:80px auto; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; text-align:center; padding:40px; background:#fff; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.1); border:1px solid #E2E8F0;">
             <div style="font-size:3rem; margin-bottom:1rem;">🔒</div>
             <h1 style="color:#0B1B3D; font-size:1.6rem; font-weight:800; margin-bottom:0.5rem;">Administrator Access Required</h1>
-            <p style="color:#64748B; font-size:1rem; line-height:1.6; margin-bottom:1.5rem;">
-                This portal is strictly reserved for EventPass compliance and platform administrators. Your current account does not have administrative privileges.
+            <p style="color:#64748B; font-size:1rem; line-height:1.6; margin-bottom:0.75rem;">
+                You are currently signed in as <strong>' . $user_label . '</strong> (' . $user_email . ').
             </p>
-            <a href="' . esc_url(home_url('/customer-dashboard')) . '" style="background:#00B4D8; color:#fff; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:700;">Return to Dashboard</a>
+            <p style="color:#64748B; font-size:0.95rem; line-height:1.6; margin-bottom:1.75rem;">
+                This portal is strictly reserved for EventPass compliance and platform administrators. To access this dashboard, please sign in with an Administrator account (e.g. username: <code>admin</code>).
+            </p>
+            <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+                <a href="' . esc_url($logout_url) . '" style="background:#0B1B3D; color:#fff; padding:10px 22px; border-radius:6px; text-decoration:none; font-weight:700; font-size:0.95rem;">Sign Out &amp; Log In as Admin</a>
+                <a href="' . esc_url(home_url('/customer-dashboard')) . '" style="background:#00B4D8; color:#fff; padding:10px 22px; border-radius:6px; text-decoration:none; font-weight:700; font-size:0.95rem;">Return to Customer Dashboard</a>
+            </div>
         </div>',
-        'Unauthorized Access',
+        'Administrator Access Required',
         ['response' => 403]
     );
 }
@@ -217,6 +228,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_admin_nonce'])) {
             } else {
                 $action_msg  = 'Please provide a valid destination email address for Brevo testing.';
                 $action_type = 'error';
+            }
+        }
+
+        // G. Update Brevo Production Credentials
+        elseif ($admin_action === 'update_brevo_credentials') {
+            $brevo_user = sanitize_text_field($_POST['brevo_user'] ?? '');
+            $brevo_key  = sanitize_text_field($_POST['brevo_key'] ?? '');
+            $brevo_from = sanitize_email($_POST['brevo_from'] ?? '');
+            $brevo_name = sanitize_text_field($_POST['brevo_name'] ?? '');
+
+            if (class_exists('EventPass_Brevo_Mailer')) {
+                EventPass_Brevo_Mailer::save_admin_credentials($brevo_user, $brevo_key, $brevo_from, $brevo_name);
+                $action_msg  = 'Brevo SMTP credentials saved successfully! Outbound emails are now configured for Brevo production delivery.';
+                $action_type = 'success';
             }
         }
     }
@@ -818,6 +843,38 @@ get_header();
                         </button>
                     </form>
                 </div>
+
+                <!-- Brevo Credentials Configuration Accordion -->
+                <details style="margin-top: 1rem; border-top: 1px solid #E2E8F0; padding-top: 0.75rem;">
+                    <summary style="font-size: 0.85rem; font-weight: 700; color: #0284C7; cursor: pointer;">
+                        ⚙️ Configure / Update Production Brevo SMTP Credentials
+                    </summary>
+                    <form method="POST" action="" style="margin-top: 0.75rem; background: #ffffff; padding: 1rem; border-radius: 8px; border: 1px solid #E2E8F0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; align-items: end;">
+                        <?php wp_nonce_field('ep_admin_action', 'ep_admin_nonce'); ?>
+                        <input type="hidden" name="ep_admin_action" value="update_brevo_credentials">
+
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Brevo SMTP Login (User)</label>
+                            <input type="text" name="brevo_user" placeholder="e.g. 7b34f001@smtp-brevo.com" style="width: 100%; padding: 6px 10px; font-size: 0.85rem; border: 1px solid #CBD5E1; border-radius: 6px;" value="<?php echo esc_attr(get_option('ep_brevo_smtp_user') ?: (defined('BREVO_SMTP_USER') ? BREVO_SMTP_USER : '')); ?>">
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Brevo SMTP Master Key (API Key)</label>
+                            <input type="password" name="brevo_key" placeholder="xsmtpsib-••••••••" style="width: 100%; padding: 6px 10px; font-size: 0.85rem; border: 1px solid #CBD5E1; border-radius: 6px;">
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Sender Email (Authenticated in Brevo)</label>
+                            <input type="email" name="brevo_from" placeholder="no-reply@eventpass.com.na" style="width: 100%; padding: 6px 10px; font-size: 0.85rem; border: 1px solid #CBD5E1; border-radius: 6px;" value="<?php echo esc_attr(get_option('ep_brevo_sender_email') ?: (defined('BREVO_SENDER_EMAIL') ? BREVO_SENDER_EMAIL : 'no-reply@eventpass.com.na')); ?>">
+                        </div>
+
+                        <div>
+                            <button type="submit" class="ep-btn ep-btn-sm" style="background: #10B981; color: #ffffff; font-weight: 700; width: 100%;">
+                                ✓ Save & Activate Brevo
+                            </button>
+                        </div>
+                    </form>
+                </details>
 
                 <?php if ($brevo_diag && !empty($brevo_diag['errors']) && $brevo_diag['configured']) : ?>
                     <div style="margin-top: 0.75rem; padding: 0.5rem 1rem; background: #FEF2F2; border-left: 3px solid #EF4444; border-radius: 4px; font-size: 0.82rem; color: #991B1B;">

@@ -57,20 +57,25 @@ class EventPass_Notification_Engine {
         // Wrap inside branded container
         $branded_html = self::render_email_template($subject, $html_body);
 
-        $provider = EventPass_Brevo_Mailer::is_configured() ? 'Brevo Production SMTP' : 'Local Interceptor (Brevo Standby)';
-        $status   = EventPass_Brevo_Mailer::is_configured() ? 'dispatched_brevo' : 'dispatched_local';
+        $is_brevo = EventPass_Brevo_Mailer::is_configured();
+        $mail_sent = wp_mail($to, $subject, $branded_html, $headers);
 
-        // Record in notification audit log
-        self::log_notification([
-            'to'         => $to,
-            'subject'    => $subject,
-            'context'    => $context,
-            'sent_at'    => current_time('mysql'),
-            'status'     => $status,
-            'provider'   => $provider,
-        ]);
+        if ($is_brevo) {
+            $provider = 'Brevo Production SMTP';
+            $status   = $mail_sent ? 'dispatched_brevo' : 'failed_brevo';
 
-        return wp_mail($to, $subject, $branded_html, $headers);
+            // Record verified SMTP outcome
+            self::log_notification([
+                'to'         => $to,
+                'subject'    => $subject,
+                'context'    => $context,
+                'sent_at'    => current_time('mysql'),
+                'status'     => $status,
+                'provider'   => $provider,
+            ]);
+        }
+
+        return $mail_sent;
     }
 
     /**
@@ -125,6 +130,13 @@ HTML;
         $order = get_post($order_id);
         if (!$order) return false;
 
+        // Security requirement: Never send paid ticket before payment is genuinely verified
+        $order_post_status = $order->post_status;
+        $order_meta_status = get_post_meta($order_id, '_ep_order_status', true);
+        if ($order_post_status !== 'publish' && $order_meta_status !== 'completed' && $order_meta_status !== 'settled') {
+            return false;
+        }
+
         $email       = get_post_meta($order_id, '_ep_order_customer_email', true);
         $name        = get_post_meta($order_id, '_ep_order_customer_name', true);
         $order_num   = get_post_meta($order_id, '_ep_order_number', true);
@@ -134,15 +146,34 @@ HTML;
         $venue       = get_post_meta($event_id, '_ep_event_venue', true) ?: 'Independence Stadium, Windhoek';
         $date        = get_post_meta($event_id, '_ep_event_date', true) ?: 'Upcoming 2026';
 
-        $ticket_rows = '';
+        $ticket_cards_html = '';
         if (is_array($issued_tickets)) {
             foreach ($issued_tickets as $t) {
-                $tok = esc_html($t['token'] ?? '');
-                $tier = esc_html($t['tier'] ?? 'General Admission');
-                $ticket_rows .= "<tr>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #E2E8F0;'><strong>{$tier}</strong></td>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #E2E8F0;'><code style='color:#00B4D8; font-weight:700;'>{$tok}</code></td>
-                </tr>";
+                $tok    = esc_html($t['token'] ?? '');
+                $tier   = esc_html($t['tier'] ?? 'General Admission');
+                $holder = esc_html($t['holder'] ?? $name);
+
+                $qr_svg = '';
+                if (class_exists('EventPass_QR_Engine') && !empty($tok)) {
+                    $qr_svg = EventPass_QR_Engine::render_svg($tok, 140);
+                }
+
+                $ticket_cards_html .= <<<CARD
+<div style="background:#ffffff; border:2px dashed #00B4D8; border-radius:12px; padding:20px; margin:20px 0; text-align:center;">
+    <div style="font-size:11px; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px;">OFFICIAL EVENT ENTRY PASS</div>
+    <div style="font-size:18px; font-weight:800; color:#0B1B3D; margin-bottom:6px;">{$tier}</div>
+    <div style="font-size:13px; color:#475569; margin-bottom:14px;">{$event_title}</div>
+    <div style="margin:10px auto; display:inline-block; max-width:150px;">
+        {$qr_svg}
+    </div>
+    <div style="margin-top:12px;">
+        <span style="font-family:monospace; font-size:14px; font-weight:800; color:#0B1B3D; background:#F1F5F9; padding:6px 14px; border-radius:6px; display:inline-block; border:1px solid #CBD5E1;">
+            {$tok}
+        </span>
+    </div>
+    <div style="font-size:12px; color:#64748B; margin-top:8px;">Attendee: <strong style="color:#1E293B;">{$holder}</strong></div>
+</div>
+CARD;
             }
         }
 
@@ -150,34 +181,26 @@ HTML;
 
         $body = <<<HTML
 <p>Dear <strong>{$name}</strong>,</p>
-<p>Your ticket purchase for <strong>{$event_title}</strong> has been successfully confirmed and verified.</p>
+<p>Your payment has been successfully verified! Below are your official electronic admission passes with unique QR codes for <strong>{$event_title}</strong>.</p>
 
 <table width="100%" style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; margin: 16px 0; border-collapse:collapse;">
     <tr><td style="padding:10px 14px; color:#64748B; width:35%;">Order Reference:</td><td style="padding:10px 14px;"><strong>{$order_num}</strong></td></tr>
     <tr><td style="padding:10px 14px; color:#64748B;">Date & Time:</td><td style="padding:10px 14px;"><strong>{$date}</strong></td></tr>
     <tr><td style="padding:10px 14px; color:#64748B;">Venue:</td><td style="padding:10px 14px;"><strong>{$venue}</strong></td></tr>
-    <tr><td style="padding:10px 14px; color:#64748B;">Total Amount:</td><td style="padding:10px 14px;"><strong style="color:#0B1B3D;">N$ {$total}</strong></td></tr>
+    <tr><td style="padding:10px 14px; color:#64748B;">Total Settled:</td><td style="padding:10px 14px;"><strong style="color:#0B1B3D;">N$ {$total}</strong></td></tr>
 </table>
 
-<h3 style="font-size:15px; color:#0B1B3D; margin-top:20px; margin-bottom:10px;">Your Digital Passes</h3>
-<table width="100%" style="border-collapse:collapse; margin-bottom:20px;">
-    <thead>
-        <tr style="background:#F1F5F9; text-align:left; font-size:12px; color:#475569;">
-            <th style="padding:8px 12px;">Category</th>
-            <th style="padding:8px 12px;">Verification Token</th>
-        </tr>
-    </thead>
-    <tbody>
-        {$ticket_rows}
-    </tbody>
-</table>
+<h3 style="font-size:16px; color:#0B1B3D; margin-top:24px; margin-bottom:8px; text-align:center;">Your Admission QR Passes</h3>
+<p style="font-size:13px; color:#64748B; text-align:center; margin-bottom:16px;">Present the scannable QR code below directly from your smartphone at the entrance turnstile:</p>
+
+{$ticket_cards_html}
 
 <p style="text-align:center; margin: 24px 0;">
-    <a href="{$dash_url}" style="background-color: #00B4D8; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 700; display: inline-block;">
-        View & Print Your Passes &rarr;
+    <a href="{$dash_url}" style="background-color: #00B4D8; color: #ffffff; padding: 12px 28px; border-radius:6px; text-decoration: none; font-weight: 700; display: inline-block;">
+        View & Download All Passes in Dashboard &rarr;
     </a>
 </p>
-<p style="font-size:13px; color:#64748B;">You can present your QR pass directly from your smartphone at the entrance gate for instant contactless verification.</p>
+<p style="font-size:12px; color:#94A3B8; text-align:center;">Each pass is encoded with a unique tamper-proof optical token. Duplication or unauthorized sharing will result in turnstile rejection.</p>
 HTML;
 
         // 1. Customer Booking Confirmation & Digital Passes
@@ -342,6 +365,34 @@ HTML;
 HTML;
 
         return self::send_email($email, $subject, $body, 'password_recovery');
+    }
+
+    /**
+     * 6b. Genuine OTP Password Recovery Notification (SOW 4.2)
+     * Real 6-digit verification code.
+     */
+    public static function notify_password_reset_otp($user_id, $otp_code) {
+        $user = get_userdata($user_id);
+        if (!$user) return false;
+
+        $email = $user->user_email;
+        $name  = $user->display_name ?: $user->user_login;
+
+        $subject = "EventPass Namibia - Password Reset Verification Code: {$otp_code}";
+        $body = <<<HTML
+<p>Dear <strong>{$name}</strong>,</p>
+<p>You requested a verification code to reset your EventPass Namibia password.</p>
+<p>Your 6-digit verification code is:</p>
+<div style="text-align:center; margin:24px 0;">
+    <div style="background-color:#0B1B3D; color:#00E5FF; font-size:32px; font-weight:900; letter-spacing:8px; padding:16px 28px; border-radius:8px; display:inline-block; font-family:monospace; border:1px solid rgba(0,229,255,0.4); box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+        {$otp_code}
+    </div>
+</div>
+<p style="font-size:14px; color:#475569; text-align:center;">Enter this code on the verification screen to proceed with setting your new password.</p>
+<p style="font-size:13px; color:#64748B; margin-top:20px;">This code is valid for <strong>15 minutes</strong>. If you did not request a password reset, please ignore this email—your account remains secure.</p>
+HTML;
+
+        return self::send_email($email, $subject, $body, 'password_reset_otp');
     }
 
     /**

@@ -54,12 +54,11 @@ define( 'WP_AUTO_UPDATE_CORE', false );
 define( 'BREVO_SMTP_HOST', getenv('BREVO_SMTP_HOST') ?: 'smtp-relay.brevo.com' );
 define( 'BREVO_SMTP_PORT', getenv('BREVO_SMTP_PORT') ? intval(getenv('BREVO_SMTP_PORT')) : 587 );
 define( 'BREVO_SMTP_SECURE', getenv('BREVO_SMTP_SECURE') ?: 'tls' );
-define( 'BREVO_SMTP_USER', getenv('BREVO_SMTP_USER') ?: '' ); // Provide authenticated Brevo SMTP login
-define( 'BREVO_SMTP_KEY', getenv('BREVO_SMTP_KEY') ?: '' );   // Provide Brevo SMTP master key
+define( 'BREVO_SMTP_USER', getenv('BREVO_SMTP_USER') ?: '' ); // Provide authenticated Brevo SMTP login or configure via Admin Hub
+define( 'BREVO_SMTP_KEY', getenv('BREVO_SMTP_KEY') ?: '' );   // Provide Brevo SMTP master key or configure via Admin Hub
 define( 'BREVO_SENDER_EMAIL', getenv('BREVO_SENDER_EMAIL') ?: 'no-reply@eventpass.com.na' );
 define( 'BREVO_SENDER_NAME', getenv('BREVO_SENDER_NAME') ?: 'EventPass Namibia' );
 
-/* That's all, stop editing! Happy publishing. */
 
 /** Absolute path to the WordPress directory. */
 if ( ! defined( 'ABSPATH' ) ) {

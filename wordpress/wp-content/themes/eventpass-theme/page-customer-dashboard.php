@@ -17,15 +17,7 @@ $user_email   = $current_user->user_email;
 $phone_number = get_user_meta( $user_id, 'phone_number', true );
 if ( empty($phone_number) ) $phone_number = '+264 (Unspecified)';
 
-// Handle instant email verification action
-if ( isset($_GET['ep_verify_now']) && check_admin_referer('ep_verify_action', 'ep_vnonce') ) {
-    update_user_meta( $user_id, '_ep_email_verified', 1 );
-    delete_user_meta( $user_id, '_ep_email_verify_token' );
-    wp_redirect( home_url('/customer-dashboard/?email_verified=1') );
-    exit;
-}
-
-// Handle resend verification email action
+// Handle resend verification email action (SOW 4.2: only genuine email owners receive link)
 if ( isset($_GET['ep_resend_verify']) && check_admin_referer('ep_resend_action', 'ep_rnonce') ) {
     $tok = get_user_meta( $user_id, '_ep_email_verify_token', true );
     if ( empty($tok) ) {
@@ -169,11 +161,8 @@ get_header();
                 </div>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <a href="<?php echo esc_url( wp_nonce_url( add_query_arg('ep_verify_now', '1', home_url('/customer-dashboard')), 'ep_verify_action', 'ep_vnonce' ) ); ?>" class="ep-btn ep-btn-sm" style="background: #059669; color: #fff; font-weight: 700; border: none;">
-                    ✓ Verify Now (Instant)
-                </a>
-                <a href="<?php echo esc_url( wp_nonce_url( add_query_arg('ep_resend_verify', '1', home_url('/customer-dashboard')), 'ep_resend_action', 'ep_rnonce' ) ); ?>" class="ep-btn ep-btn-sm" style="background: #D97706; color: #fff; border: none;">
-                    Resend Email
+                <a href="<?php echo esc_url( wp_nonce_url( add_query_arg('ep_resend_verify', '1', home_url('/customer-dashboard')), 'ep_resend_action', 'ep_rnonce' ) ); ?>" class="ep-btn ep-btn-sm" style="background: #0B1B3D; color: #00E5FF; border: 1px solid rgba(0,229,255,0.4); font-weight: 700;">
+                    ✉️ Resend Verification Link
                 </a>
             </div>
         </div>
