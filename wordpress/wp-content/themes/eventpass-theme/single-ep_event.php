@@ -248,7 +248,7 @@ if ($event_post && $event_post->post_type === 'ep_event') {
                     </div>
 
                     <!-- Booking Summary Subtotal -->
-                    <div style="border-top: 2px solid var(--ep-slate-200); padding-top: 1.25rem; margin-bottom: 1.25rem;">
+                    <div style="border-top: 2px solid var(--ep-slate-200); padding-top: 1.25rem; margin-bottom: 1.5rem;">
                         <div style="display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 800; color: var(--ep-navy);">
                             <span>Total (NAD):</span>
                             <span id="epGrandTotal">N$ 0.00</span>
@@ -256,15 +256,8 @@ if ($event_post && $event_post->post_type === 'ep_event') {
                         <span style="font-size: 0.75rem; color: var(--ep-slate-600); display: block; margin-top: 0.2rem;">All prices include Namibian statutory VAT</span>
                     </div>
 
-                    <?php if ( ! is_user_logged_in() ) : ?>
-                        <div style="background: rgba(0, 180, 216, 0.08); border: 1px solid rgba(0, 180, 216, 0.35); border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.78rem; color: var(--ep-navy); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; line-height: 1.4;">
-                            <span>🔒</span>
-                            <span><strong>Registration Required:</strong> Tickets are registered to your verified account for instant QR passes.</span>
-                        </div>
-                    <?php endif; ?>
-
                     <button type="submit" id="epCheckoutBtn" class="ep-btn ep-btn-primary ep-btn-lg" style="width: 100%; justify-content: center; opacity: 0.5; pointer-events: none;">
-                        <span><?php echo is_user_logged_in() ? 'Proceed to Checkout &rarr;' : 'Sign In / Register & Book &rarr;'; ?></span>
+                        <span>Proceed to Checkout &rarr;</span>
                     </button>
                 </form>
             </div>
