@@ -527,7 +527,13 @@ get_header();
                                                     <?php wp_nonce_field('ep_admin_action', 'ep_admin_nonce'); ?>
                                                     <input type="hidden" name="ep_admin_action" value="approve_event">
                                                     <input type="hidden" name="event_id" value="<?php echo esc_attr($pev->ID); ?>">
-                                                    <button type="submit" class="ep-btn ep-btn-sm" style="background: #10B981; color: #fff; font-weight: 700;" onclick="return confirm('Approve this event and publish live?');">
+                                                    <button type="button" class="ep-btn ep-btn-sm" style="background: #10B981; color: #fff; font-weight: 700;" onclick="openAdminConfirmModal(this.form, {
+                                                        title: 'Approve Event Live',
+                                                        message: 'Are you sure you want to approve <strong><?php echo esc_js($pev->post_title); ?></strong> and publish it live on the EventPass marketplace?',
+                                                        confirmText: '✓ Yes, Publish Live',
+                                                        theme: 'success',
+                                                        icon: '🎉'
+                                                    });">
                                                         ✓ Approve Live
                                                     </button>
                                                 </form>
@@ -535,7 +541,13 @@ get_header();
                                                     <?php wp_nonce_field('ep_admin_action', 'ep_admin_nonce'); ?>
                                                     <input type="hidden" name="ep_admin_action" value="reject_event">
                                                     <input type="hidden" name="event_id" value="<?php echo esc_attr($pev->ID); ?>">
-                                                    <button type="submit" class="ep-btn ep-btn-sm" style="background: rgba(239,68,68,0.1); color: #DC2626; border: 1px solid rgba(239,68,68,0.3); font-weight: 700;" onclick="return confirm('Reject and return event to Draft?');">
+                                                    <button type="button" class="ep-btn ep-btn-sm" style="background: rgba(239,68,68,0.1); color: #DC2626; border: 1px solid rgba(239,68,68,0.3); font-weight: 700;" onclick="openAdminConfirmModal(this.form, {
+                                                        title: 'Decline Event Submission',
+                                                        message: 'Are you sure you want to decline <strong><?php echo esc_js($pev->post_title); ?></strong> and return it to Draft status?',
+                                                        confirmText: 'Yes, Return to Draft',
+                                                        theme: 'danger',
+                                                        icon: '⚠️'
+                                                    });">
                                                         Decline
                                                     </button>
                                                 </form>
@@ -620,7 +632,13 @@ get_header();
                                                     <?php wp_nonce_field('ep_admin_action', 'ep_admin_nonce'); ?>
                                                     <input type="hidden" name="ep_admin_action" value="approve_organiser">
                                                     <input type="hidden" name="app_id" value="<?php echo esc_attr($porg->ID); ?>">
-                                                    <button type="submit" class="ep-btn ep-btn-sm" style="background: #10B981; color: #fff; font-weight: 700;" onclick="return confirm('Accredit this organiser and grant live event publishing privileges?');">
+                                                    <button type="button" class="ep-btn ep-btn-sm" style="background: #10B981; color: #fff; font-weight: 700;" onclick="openAdminConfirmModal(this.form, {
+                                                        title: 'Accredit Organiser',
+                                                        message: 'Are you sure you want to accredit <strong><?php echo esc_js($org_name); ?></strong> and grant live event publishing privileges on EventPass Namibia?',
+                                                        confirmText: '✓ Yes, Accredit Organiser',
+                                                        theme: 'success',
+                                                        icon: '✓'
+                                                    });">
                                                         ✓ Accredit Organiser
                                                     </button>
                                                 </form>
@@ -628,7 +646,13 @@ get_header();
                                                     <?php wp_nonce_field('ep_admin_action', 'ep_admin_nonce'); ?>
                                                     <input type="hidden" name="ep_admin_action" value="reject_organiser">
                                                     <input type="hidden" name="app_id" value="<?php echo esc_attr($porg->ID); ?>">
-                                                    <button type="submit" class="ep-btn ep-btn-sm" style="background: rgba(239,68,68,0.1); color: #DC2626; border: 1px solid rgba(239,68,68,0.3); font-weight: 700;" onclick="return confirm('Decline this organiser application?');">
+                                                    <button type="button" class="ep-btn ep-btn-sm" style="background: rgba(239,68,68,0.1); color: #DC2626; border: 1px solid rgba(239,68,68,0.3); font-weight: 700;" onclick="openAdminConfirmModal(this.form, {
+                                                        title: 'Decline Organiser Application',
+                                                        message: 'Are you sure you want to decline the accreditation application for <strong><?php echo esc_js($org_name); ?></strong>?',
+                                                        confirmText: 'Yes, Decline Application',
+                                                        theme: 'danger',
+                                                        icon: '⚠️'
+                                                    });">
                                                         Decline
                                                     </button>
                                                 </form>
@@ -708,7 +732,13 @@ get_header();
                                                 <input type="hidden" name="ep_admin_action" value="process_payout">
                                                 <input type="hidden" name="payout_id" value="<?php echo esc_attr($pay->ID); ?>">
                                                 <input type="text" name="eft_reference" placeholder="EFT Trace Ref" required style="padding: 0.4rem 0.6rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.82rem; width: 140px;">
-                                                <button type="submit" class="ep-btn ep-btn-sm" style="background: #10B981; color: #fff; font-weight: 700; white-space: nowrap;" onclick="return confirm('Confirm Electronic Funds Transfer remittance for N$ <?php echo number_format($p_amount, 2); ?>?');">
+                                                <button type="button" class="ep-btn ep-btn-sm" style="background: #10B981; color: #fff; font-weight: 700; white-space: nowrap;" onclick="const refInput = this.form.querySelector('input[name=eft_reference]'); const ref = refInput ? refInput.value.trim() : ''; if (!ref) { if (refInput) refInput.focus(); alert('Please enter an EFT Trace Reference first.'); return; } openAdminConfirmModal(this.form, {
+                                                    title: 'Confirm EFT Remittance',
+                                                    message: 'Remit net proceeds of <strong>N$ <?php echo number_format($p_amount, 2); ?></strong> to <strong><?php echo esc_js($p_name); ?></strong> (<?php echo esc_js($p_bank); ?>)?<br><div style=\'margin-top:0.75rem; padding: 0.5rem 0.75rem; background:#F1F5F9; border-radius:6px; font-size:0.85rem; color:#334155;\'><strong>EFT Trace Reference:</strong> ' + ref + '</div>',
+                                                    confirmText: '✓ Disburse Funds',
+                                                    theme: 'success',
+                                                    icon: '💰'
+                                                });">
                                                     Disburse EFT &rarr;
                                                 </button>
                                             </form>
@@ -953,6 +983,101 @@ get_header();
     </div>
 
 </div>
+
+<!-- Admin Action Confirmation Modal (Custom Branded Dialog) -->
+<div id="epAdminConfirmModal" style="display: none; position: fixed; inset: 0; background: rgba(6, 14, 32, 0.72); backdrop-filter: blur(6px); z-index: 99999; align-items: center; justify-content: center; padding: 1.5rem; transition: all 0.25s ease;">
+    <div style="background: #ffffff; border-radius: 20px; max-width: 480px; width: 100%; box-shadow: 0 25px 60px rgba(0,0,0,0.35); border: 1px solid var(--ep-slate-200); overflow: hidden; animation: epModalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);">
+        <div style="padding: 2rem 2rem 1.25rem; text-align: center;">
+            <div id="epModalIconBadge" style="width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.85rem; margin-bottom: 1rem; background: rgba(16,185,129,0.12); color: #059669;">
+                ✓
+            </div>
+            <h3 id="epModalTitle" style="font-size: 1.35rem; font-weight: 800; color: var(--ep-navy); margin: 0 0 0.5rem 0;">
+                Confirm Action
+            </h3>
+            <div id="epModalMessage" style="font-size: 0.95rem; color: #475569; margin: 0; line-height: 1.55;">
+                Are you sure you want to proceed with this administrative action?
+            </div>
+        </div>
+        <div style="padding: 1.25rem 2rem 1.75rem; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <button type="button" onclick="closeAdminConfirmModal()" class="ep-btn ep-btn-sm" style="background: #ffffff; color: #475569; border: 1px solid #CBD5E1; font-weight: 600; padding: 0.6rem 1.35rem; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;">
+                Cancel
+            </button>
+            <button type="button" id="epModalConfirmBtn" onclick="executeAdminConfirmedAction()" class="ep-btn ep-btn-sm" style="background: #10B981; color: #ffffff; font-weight: 700; padding: 0.6rem 1.6rem; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(16,185,129,0.3); transition: all 0.15s ease;">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes epModalPop {
+    from { opacity: 0; transform: scale(0.92) translateY(12px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+</style>
+
+<script>
+let epPendingActionForm = null;
+
+function openAdminConfirmModal(formElement, config) {
+    epPendingActionForm = formElement;
+    
+    const modal = document.getElementById('epAdminConfirmModal');
+    const iconBadge = document.getElementById('epModalIconBadge');
+    const title = document.getElementById('epModalTitle');
+    const msg = document.getElementById('epModalMessage');
+    const btn = document.getElementById('epModalConfirmBtn');
+    
+    title.textContent = config.title || 'Confirm Action';
+    msg.innerHTML = config.message || 'Are you sure you want to proceed?';
+    btn.textContent = config.confirmText || 'Confirm';
+    
+    if (config.theme === 'danger') {
+        iconBadge.innerHTML = config.icon || '⚠️';
+        iconBadge.style.background = 'rgba(239, 68, 68, 0.12)';
+        iconBadge.style.color = '#DC2626';
+        btn.style.background = '#DC2626';
+        btn.style.boxShadow = '0 4px 14px rgba(220, 38, 38, 0.3)';
+    } else {
+        iconBadge.innerHTML = config.icon || '✓';
+        iconBadge.style.background = 'rgba(16, 185, 129, 0.12)';
+        iconBadge.style.color = '#059669';
+        btn.style.background = '#10B981';
+        btn.style.boxShadow = '0 4px 14px rgba(16, 185, 129, 0.3)';
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function closeAdminConfirmModal() {
+    const modal = document.getElementById('epAdminConfirmModal');
+    if (modal) modal.style.display = 'none';
+    epPendingActionForm = null;
+}
+
+function executeAdminConfirmedAction() {
+    if (epPendingActionForm) {
+        const formToSubmit = epPendingActionForm;
+        closeAdminConfirmModal();
+        formToSubmit.submit();
+    }
+}
+
+// Close on backdrop click
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('epAdminConfirmModal');
+    if (e.target === modal) {
+        closeAdminConfirmModal();
+    }
+});
+
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeAdminConfirmModal();
+    }
+});
+</script>
 
 <?php
 get_footer();
