@@ -163,11 +163,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_create_event_nonce
         $town        = sanitize_text_field($_POST['event_town'] ?? 'windhoek');
         $venue       = sanitize_text_field($_POST['event_venue'] ?? '');
         $date        = sanitize_text_field($_POST['event_date'] ?? '');
-        $time        = sanitize_text_field($_POST['event_time'] ?? '18:00 - 02:00 CAT');
         $desc        = wp_kses_post($_POST['event_description'] ?? '');
         $image       = esc_url_raw($_POST['event_image'] ?? '');
         if (empty($image)) {
             $image = get_template_directory_uri() . '/assets/images/hero/concert-lights.jpg';
+        }
+
+        // Strict Structured Event & Gate Time Validation
+        $gate_time  = sanitize_text_field($_POST['gate_time'] ?? '');
+        $start_time = sanitize_text_field($_POST['event_start_time'] ?? '');
+        $end_time   = sanitize_text_field($_POST['event_end_time'] ?? '');
+
+        if (!empty($gate_time) && !empty($start_time)) {
+            if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $gate_time) || !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $start_time)) {
+                $flash_msg  = 'Invalid time format. Please select valid gate opening and start times.';
+                $flash_type = 'error';
+                $time = '';
+            } else {
+                $time = 'Gates: ' . $gate_time . ' | Starts: ' . $start_time;
+                if (!empty($end_time) && preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $end_time)) {
+                    $time .= ' - ' . $end_time;
+                }
+                $time .= ' CAT';
+            }
+        } else {
+            $time = 'Gates: 16:00 | Starts: 18:00 - 02:00 CAT';
         }
 
         if (empty($event_title) || empty($category) || empty($venue) || empty($date)) {
@@ -287,8 +307,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_edit_event_nonce']
         $town        = sanitize_text_field($_POST['edit_event_town'] ?? 'windhoek');
         $venue       = sanitize_text_field($_POST['edit_event_venue'] ?? '');
         $date        = sanitize_text_field($_POST['edit_event_date'] ?? '');
-        $time        = sanitize_text_field($_POST['edit_event_time'] ?? '18:00 - 02:00 CAT');
         $desc        = wp_kses_post($_POST['edit_event_description'] ?? '');
+
+        // Strict Structured Event & Gate Time Validation for Edit
+        $edit_gate_time  = sanitize_text_field($_POST['edit_gate_time'] ?? '');
+        $edit_start_time = sanitize_text_field($_POST['edit_start_time'] ?? '');
+        $edit_end_time   = sanitize_text_field($_POST['edit_end_time'] ?? '');
+
+        if (!empty($edit_gate_time) && !empty($edit_start_time)) {
+            if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $edit_gate_time) || !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $edit_start_time)) {
+                $flash_msg  = 'Invalid time format. Please select valid gate opening and start times.';
+                $flash_type = 'error';
+                $time = '';
+            } else {
+                $time = 'Gates: ' . $edit_gate_time . ' | Starts: ' . $edit_start_time;
+                if (!empty($edit_end_time) && preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $edit_end_time)) {
+                    $time .= ' - ' . $edit_end_time;
+                }
+                $time .= ' CAT';
+            }
+        } else {
+            $time = 'Gates: 16:00 | Starts: 18:00 - 02:00 CAT';
+        }
 
         if (empty($event_title) || empty($category) || empty($venue) || empty($date)) {
             $flash_msg  = 'Please complete all required fields (Title, Category, Venue, Date).';
@@ -907,9 +947,37 @@ get_header();
                     </div>
                 </div>
 
-                <div>
-                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.4rem;">Event Time & Gate Opening</label>
-                    <input type="text" name="event_time" placeholder="e.g. 18:00 - 02:00 CAT" value="18:00 - 02:00 CAT" style="width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 10px; font-size: 0.95rem;">
+                <div style="background: var(--ep-slate-50); border: 1px solid var(--ep-slate-200); border-radius: 12px; padding: 1.15rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+                        <label style="font-size: 0.85rem; font-weight: 800; color: var(--ep-navy); text-transform: uppercase; letter-spacing: 0.03em;">
+                            🕒 Event Schedule & Gate Opening Times *
+                        </label>
+                        <span style="font-size: 0.75rem; color: #64748B; background: #fff; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--ep-slate-200); font-weight: 600;">CAT (UTC+2)</span>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.85rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem;">
+                                🚪 Gates Open *
+                            </label>
+                            <input type="time" name="gate_time" id="create_gate_time" required value="16:00" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem;">
+                                ▶️ Event Starts *
+                            </label>
+                            <input type="time" name="event_start_time" id="create_start_time" required value="18:00" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem;">
+                                ⏹️ Event Ends (Curfew)
+                            </label>
+                            <input type="time" name="event_end_time" id="create_end_time" value="02:00" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;">
+                        </div>
+                    </div>
+                    <small style="display: block; margin-top: 0.5rem; font-size: 0.76rem; color: #64748B;">
+                        Strict time pickers enforced. Free-form text is disabled to ensure valid event schedule data.
+                    </small>
                 </div>
 
                 <div>
@@ -1010,9 +1078,34 @@ get_header();
                     </div>
                 </div>
 
-                <div>
-                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.4rem;">Event Time & Gate Opening</label>
-                    <input type="text" name="edit_event_time" id="edit_event_time" style="width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 10px; font-size: 0.95rem;">
+                <div style="background: var(--ep-slate-50); border: 1px solid var(--ep-slate-200); border-radius: 12px; padding: 1.15rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+                        <label style="font-size: 0.85rem; font-weight: 800; color: var(--ep-navy); text-transform: uppercase; letter-spacing: 0.03em;">
+                            🕒 Event Schedule & Gate Opening Times *
+                        </label>
+                        <span style="font-size: 0.75rem; color: #64748B; background: #fff; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--ep-slate-200); font-weight: 600;">CAT (UTC+2)</span>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.85rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem;">
+                                🚪 Gates Open *
+                            </label>
+                            <input type="time" name="edit_gate_time" id="edit_gate_time" required value="16:00" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem;">
+                                ▶️ Event Starts *
+                            </label>
+                            <input type="time" name="edit_start_time" id="edit_start_time" required value="18:00" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem;">
+                                ⏹️ Event Ends (Curfew)
+                            </label>
+                            <input type="time" name="edit_end_time" id="edit_end_time" value="02:00" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;">
+                        </div>
+                    </div>
                 </div>
 
                 <div>
@@ -1129,7 +1222,28 @@ function openEditEventModal(data) {
     document.getElementById('edit_event_town').value = data.town;
     document.getElementById('edit_event_venue').value = data.venue;
     document.getElementById('edit_event_date').value = data.date;
-    document.getElementById('edit_event_time').value = data.time;
+
+    // Parse structured time for edit modal
+    const timeStr = data.time || '';
+    const timeMatches = timeStr.match(/\b\d{2}:\d{2}\b/g) || [];
+    if (timeMatches.length >= 2) {
+        document.getElementById('edit_gate_time').value = timeMatches[0];
+        document.getElementById('edit_start_time').value = timeMatches[1];
+        if (timeMatches.length >= 3) {
+            document.getElementById('edit_end_time').value = timeMatches[2];
+        } else {
+            document.getElementById('edit_end_time').value = '02:00';
+        }
+    } else if (timeMatches.length === 1) {
+        document.getElementById('edit_gate_time').value = '16:00';
+        document.getElementById('edit_start_time').value = timeMatches[0];
+        document.getElementById('edit_end_time').value = '02:00';
+    } else {
+        document.getElementById('edit_gate_time').value = '16:00';
+        document.getElementById('edit_start_time').value = '18:00';
+        document.getElementById('edit_end_time').value = '02:00';
+    }
+
     document.getElementById('edit_event_description').value = data.desc;
 
     document.getElementById('edit_tier_gen_price').value = data.gen_price;
