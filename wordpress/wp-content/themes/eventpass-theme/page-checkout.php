@@ -142,6 +142,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_checkout_action'])
         if (empty($items)) {
             $checkout_error = __('Please select at least one ticket to purchase.', 'eventpass-core');
         } else {
+            // Check if user should be registered or linked to existing account
+            $booking_user_id = $is_logged_in ? $current_user->ID : 0;
+            if (!$is_logged_in && !empty($customer_email)) {
+                $existing_user = get_user_by('email', $customer_email);
+                if ($existing_user) {
+                    $booking_user_id = $existing_user->ID;
+                } elseif (!empty($_POST['ep_create_account']) || !empty($_POST['ep_account_password'])) {
+                    $acct_pwd = trim($_POST['ep_account_password'] ?? '');
+                    if (strlen($acct_pwd) >= 6) {
+                        $base_un = sanitize_user(current(explode('@', $customer_email)));
+                        $new_un  = $base_un;
+                        $u_idx   = 1;
+                        while (username_exists($new_un)) {
+                            $new_un = $base_un . $u_idx;
+                            $u_idx++;
+                        }
+                        $name_parts = explode(' ', $customer_name, 2);
+                        $created_uid = wp_insert_user([
+                            'user_login'   => $new_un,
+                            'user_email'   => $customer_email,
+                            'user_pass'    => $acct_pwd,
+                            'display_name' => $customer_name,
+                            'first_name'   => $name_parts[0] ?? '',
+                            'last_name'    => $name_parts[1] ?? '',
+                            'role'         => 'event_customer',
+                        ]);
+                        if (!is_wp_error($created_uid)) {
+                            $booking_user_id = $created_uid;
+                            if (!empty($customer_phone)) {
+                                update_user_meta($created_uid, 'phone_number', $customer_phone);
+                            }
+                            update_user_meta($created_uid, '_ep_email_verified', 1);
+                            wp_set_current_user($created_uid);
+                            wp_set_auth_cookie($created_uid, true);
+                            if (class_exists('EventPass_Notification_Engine')) {
+                                EventPass_Notification_Engine::notify_customer_welcome($created_uid);
+                            }
+                        }
+                    }
+                }
+            }
+
             // Create Order and reserve inventory
             $order_id = eventpass_create_order([
                 'event_id'       => $event_id,
@@ -149,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_checkout_action'])
                 'customer_name'  => $customer_name,
                 'customer_email' => $customer_email,
                 'customer_phone' => $customer_phone,
-                'user_id'        => $is_logged_in ? $current_user->ID : 0,
+                'user_id'        => $booking_user_id,
                 'payment_method' => $payment_method,
             ]);
 
@@ -341,7 +383,7 @@ if ($event && $event->post_type === 'ep_event') {
                                 <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
                                     Cardholder Full Name
                                 </label>
-                                <input type="text" id="fn_card_name" value="<?php echo esc_attr($p_cust_name); ?>" placeholder="e.g. Mohit Sharma" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 0.95rem; font-weight: 600; color: #0F172A;">
+                                <input type="text" id="fn_card_name" value="<?php echo esc_attr($p_cust_name); ?>" placeholder="Full Name on Card" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 0.95rem; font-weight: 600; color: #0F172A;">
                             </div>
 
                             <div>
@@ -352,7 +394,7 @@ if ($event && $event->post_type === 'ep_event') {
                                     <span id="fn_card_brand_badge" style="font-size: 0.75rem; font-weight: 800; color: #00B4D8;"></span>
                                 </div>
                                 <div style="position: relative;">
-                                    <input type="text" id="fn_card_number" placeholder="4000 1234 5678 9010" maxlength="19" oninput="formatFinaticCardNumber(this)" style="width: 100%; padding: 0.75rem 2.8rem 0.75rem 1rem; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 1.05rem; font-family: monospace; letter-spacing: 1px; font-weight: 700; color: #0F172A;">
+                                    <input type="text" id="fn_card_number" placeholder="•••• •••• •••• ••••" maxlength="19" oninput="formatFinaticCardNumber(this)" style="width: 100%; padding: 0.75rem 2.8rem 0.75rem 1rem; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 1.05rem; font-family: monospace; letter-spacing: 1px; font-weight: 700; color: #0F172A;">
                                     <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 1.25rem;">💳</span>
                                 </div>
                             </div>
@@ -1071,19 +1113,35 @@ if ($event && $event->post_type === 'ep_event') {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
                         <div>
                             <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Full Name *</label>
-                            <input type="text" name="customer_name" required value="<?php echo esc_attr($default_name ?: 'Johannes Shilongo'); ?>" placeholder="First and Last Name" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
+                            <input type="text" name="customer_name" required value="<?php echo esc_attr($default_name); ?>" placeholder="First and Last Name" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
                         </div>
                         <div>
                             <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Email Address *</label>
-                            <input type="email" name="customer_email" required value="<?php echo esc_attr($default_email ?: 'johannes@example.com.na'); ?>" placeholder="you@domain.com.na" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
+                            <input type="email" name="customer_email" required value="<?php echo esc_attr($default_email); ?>" placeholder="you@domain.com.na" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
                         </div>
                     </div>
 
-                    <div style="margin-bottom: 2rem;">
+                    <div style="margin-bottom: 1.5rem;">
                         <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Mobile Phone (+264) *</label>
-                        <input type="tel" name="customer_phone" required value="<?php echo esc_attr($default_phone ?: '+264 81 234 5678'); ?>" placeholder="+264 81 234 5678" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
+                        <input type="tel" name="customer_phone" required value="<?php echo esc_attr($default_phone); ?>" placeholder="+264 81 123 4567" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
                         <small style="color: #64748B; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Used for SMS ticket dispatch and gate customer support.</small>
                     </div>
+
+                    <?php if ( ! $is_logged_in ) : ?>
+                    <div style="margin-bottom: 1.75rem; padding: 1rem 1.25rem; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px;">
+                        <label style="display: flex; align-items: flex-start; gap: 0.65rem; cursor: pointer; margin-bottom: 0;">
+                            <input type="checkbox" name="ep_create_account" id="ep_create_account" value="1" onchange="document.getElementById('ep_checkout_pwd_row').style.display = this.checked ? 'block' : 'none';" style="margin-top: 0.25rem; accent-color: var(--ep-teal);">
+                            <div>
+                                <strong style="color: var(--ep-navy); font-size: 0.9rem; display: block;">Create an EventPass Account with this booking</strong>
+                                <span style="color: #64748B; font-size: 0.8rem; line-height: 1.4; display: block;">Automatically save this pass to your Customer Dashboard so you can log in, download, and manage your tickets anytime.</span>
+                            </div>
+                        </label>
+                        <div id="ep_checkout_pwd_row" style="display: none; margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px dashed #CBD5E1;">
+                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.35rem;">Choose Account Password (min. 8 characters)</label>
+                            <input type="password" name="ep_account_password" placeholder="Choose a secure password" style="width: 100%; padding: 0.65rem 0.9rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.9rem;">
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--ep-navy); margin-bottom: 1.25rem; border-top: 1px solid var(--ep-slate-100); padding-top: 1.5rem;">
                         2. Select Payment Gateway (Namibia)

@@ -123,9 +123,6 @@ function eventpass_create_order($args) {
         return new WP_Error('invalid_event', __('Invalid event ID provided for booking.', 'eventpass-core'));
     }
 
-    // SOW 4.2: Support registered customer accounts & fast guest checkout for client presentation
-    $user_id = intval($args['user_id'] ?? get_current_user_id());
-
     if (empty($customer_name) || empty($customer_email)) {
         return new WP_Error('missing_contact', __('Customer full name and email are required.', 'eventpass-core'));
     }

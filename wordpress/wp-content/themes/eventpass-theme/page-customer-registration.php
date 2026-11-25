@@ -5,14 +5,8 @@
  * @package EventPass_Namibia
  */
 
-$redirect_to = !empty($_REQUEST['redirect_to']) ? esc_url_raw($_REQUEST['redirect_to']) : '';
-
 if ( is_user_logged_in() ) {
-    if (!empty($redirect_to)) {
-        wp_safe_redirect($redirect_to);
-    } else {
-        wp_redirect( home_url('/customer-dashboard') );
-    }
+    wp_redirect( home_url('/customer-dashboard') );
     exit;
 }
 
@@ -83,11 +77,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_reg_nonce']) ) {
                 wp_set_current_user( $user_id );
                 wp_set_auth_cookie( $user_id, true );
 
-                if (!empty($redirect_to) && wp_validate_redirect($redirect_to)) {
-                    wp_safe_redirect( $redirect_to );
-                } else {
-                    wp_redirect( home_url('/customer-dashboard/?welcome=1') );
-                }
+                wp_redirect( home_url('/customer-dashboard/?welcome=1') );
                 exit;
             }
         }
@@ -114,9 +104,6 @@ get_header();
 
         <form action="<?php echo esc_url( home_url('/customer-registration') ); ?>" method="POST">
             <?php wp_nonce_field( 'ep_customer_reg_action', 'ep_reg_nonce' ); ?>
-            <?php if (!empty($redirect_to)) : ?>
-                <input type="hidden" name="redirect_to" value="<?php echo esc_attr($redirect_to); ?>">
-            <?php endif; ?>
 
             <div style="margin-bottom: 1.25rem;">
                 <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Full Name <span style="color: var(--ep-danger);">*</span></label>
