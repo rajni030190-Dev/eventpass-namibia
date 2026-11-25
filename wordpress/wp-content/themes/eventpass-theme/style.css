@@ -74,9 +74,15 @@ img {
 
 .container {
   width: 100%;
-  max-width: 1280px;
+  max-width: 1560px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 clamp(1.25rem, 2.5vw, 2.5rem);
+}
+
+.ep-site-header .container,
+.ep-top-bar .container {
+  max-width: 1680px;
+  padding: 0 clamp(1.25rem, 2.8vw, 2.75rem);
 }
 
 /* Header & Navigation */

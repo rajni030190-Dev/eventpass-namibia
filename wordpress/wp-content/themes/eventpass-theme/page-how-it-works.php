@@ -39,7 +39,7 @@ get_header();
 </section>
 
 <!-- Main Step-by-Step Interactive Guide -->
-<div class="container" style="padding: 4.5rem 1.5rem 5rem;">
+<div class="container" style="padding-top: 4.5rem; padding-bottom: 5rem;">
 
     <!-- ================= BUYER JOURNEY (DEFAULT) ================= -->
     <div id="hiwBuyerFlow">
