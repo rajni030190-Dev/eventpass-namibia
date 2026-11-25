@@ -390,8 +390,11 @@ if ($event && $event->post_type === 'ep_event') {
                         <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem; text-align: center;">
                             Enter 6-Digit One-Time Security Passcode
                         </label>
-                        <input type="text" id="ep_3ds_otp" maxlength="6" placeholder="0 0 0 0 0 0" style="width: 100%; height: 50px; text-align: center; font-size: 1.5rem; font-family: monospace; letter-spacing: 8px; font-weight: 800; border: 2px solid #00B4D8; border-radius: 12px; color: #0B1B3D; background: #F8FAFC;">
+                        <input type="text" id="ep_3ds_otp" maxlength="6" placeholder="0 0 0 0 0 0" style="width: 100%; height: 50px; text-align: center; font-size: 1.5rem; font-family: monospace; letter-spacing: 8px; font-weight: 800; border: 2px solid #00B4D8; border-radius: 12px; color: #0B1B3D; background: #F8FAFC; transition: all 0.2s ease;">
                         
+                        <!-- Real-time Error / Failure Notification Box -->
+                        <div id="ep_3ds_error_box" style="display: none; background: #FEF2F2; border: 1px solid #FCA5A5; color: #991B1B; padding: 0.65rem 0.85rem; border-radius: 8px; margin-top: 0.75rem; font-size: 0.82rem; text-align: left; line-height: 1.45;"></div>
+
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.78rem;">
                             <span style="color: #64748B;">Expires in: <strong id="fn_timer">04:59</strong></span>
                             <button type="button" onclick="autoFillDemoPasscode()" style="background: none; border: none; color: #0284C7; font-weight: 700; cursor: pointer; text-decoration: underline; padding: 0;">
@@ -407,8 +410,8 @@ if ($event && $event->post_type === 'ep_event') {
 
                     <!-- Action Buttons -->
                     <div style="display: flex; gap: 0.75rem;">
-                        <button type="button" onclick="close3DSecureModal()" style="flex: 1; height: 46px; background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; border-radius: 10px; font-weight: 700; cursor: pointer;">
-                            Cancel
+                        <button type="button" onclick="handleCancel3DSecure()" style="flex: 1; height: 46px; background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; border-radius: 10px; font-weight: 700; cursor: pointer;">
+                            Cancel & Decline
                         </button>
                         <button type="button" id="ep_btn_confirm_otp" onclick="submitFinaticSettlement()" style="flex: 2; height: 46px; background: #10B981; color: #ffffff; border: none; border-radius: 10px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(16,185,129,0.35);">
                             Authorize & Pay N$ <?php echo esc_html($p_amount); ?>
@@ -427,6 +430,14 @@ if ($event && $event->post_type === 'ep_event') {
         @keyframes epModalPop {
             from { opacity: 0; transform: scale(0.92) translateY(12px); }
             to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes epShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .ep-shake {
+            animation: epShake 0.35s ease-in-out;
         }
         </style>
 
@@ -534,24 +545,139 @@ if ($event && $event->post_type === 'ep_event') {
             }, 1200);
         }
 
+        let otpFailedAttempts = 0;
+        const VALID_TEST_OTP = '123456';
+
         function autoFillDemoPasscode() {
-            document.getElementById('ep_3ds_otp').value = '123456';
+            const input = document.getElementById('ep_3ds_otp');
+            input.value = VALID_TEST_OTP;
+            input.style.borderColor = '#10B981';
+            document.getElementById('ep_3ds_error_box').style.display = 'none';
         }
 
         function close3DSecureModal() {
             document.getElementById('ep3DSecureModal').style.display = 'none';
         }
 
-        function submitFinaticSettlement() {
-            const otp = document.getElementById('ep_3ds_otp').value.replace(/\D/g, '');
-            if (otp.length < 4) {
-                alert('Please enter your 6-digit security OTP passcode (or click Auto-Fill Test OTP).');
+        function handleCancel3DSecure() {
+            if (!confirm('Cancel this transaction? The payment request will be rejected and order marked as cancelled.')) {
                 return;
             }
-
             const progress = document.getElementById('ep_settlement_progress');
             const btn = document.getElementById('ep_btn_confirm_otp');
             progress.style.display = 'block';
+            progress.style.background = '#FEF2F2';
+            progress.style.color = '#991B1B';
+            progress.innerHTML = '⏳ Declining transaction with Bank of Namibia gateway...';
+            btn.disabled = true;
+
+            const payload = {
+                merchant_id: '<?php echo esc_js($p_merchant); ?>',
+                order_id: <?php echo intval($p_order_id); ?>,
+                amount: '<?php echo esc_js($p_amount); ?>',
+                timestamp: <?php echo intval($p_time); ?>,
+                signature: '<?php echo esc_js($p_sig); ?>',
+                status: 'CANCELLED',
+                transaction_id: 'FIN-NAM-CANCELLED-' + Date.now()
+            };
+
+            fetch('<?php echo esc_url($webhook_url); ?>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .finally(() => {
+                setTimeout(() => {
+                    window.location.href = '<?php echo esc_url(home_url('/customer-dashboard?payment_cancelled=1&order_id=' . $p_order_id)); ?>';
+                }, 800);
+            });
+        }
+
+        function submitFinaticSettlement() {
+            const otpInput = document.getElementById('ep_3ds_otp');
+            const otp = otpInput.value.replace(/\D/g, '');
+            const errorBox = document.getElementById('ep_3ds_error_box');
+            const progress = document.getElementById('ep_settlement_progress');
+            const btn = document.getElementById('ep_btn_confirm_otp');
+
+            errorBox.style.display = 'none';
+            otpInput.style.borderColor = '#00B4D8';
+            otpInput.classList.remove('ep-shake');
+
+            if (otp.length < 4) {
+                errorBox.innerHTML = '⚠️ Please enter the complete 6-digit OTP passcode received on your device.';
+                errorBox.style.display = 'block';
+                otpInput.style.borderColor = '#EF4444';
+                void otpInput.offsetWidth; // trigger reflow
+                otpInput.classList.add('ep-shake');
+                return;
+            }
+
+            // Authentic Bank 3D-Secure 2.0 Verification Check:
+            // Only the designated test passcode (123456) is authorized.
+            // Any other OTP fails bank authentication!
+            if (otp !== VALID_TEST_OTP) {
+                otpFailedAttempts++;
+                progress.style.display = 'block';
+                progress.style.background = '#FFFBEB';
+                progress.style.color = '#B45309';
+                progress.innerHTML = '⏳ Verifying passcode with Bank 3D-Secure ACS switch...';
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+
+                setTimeout(() => {
+                    progress.style.display = 'none';
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+
+                    if (otpFailedAttempts < 3) {
+                        const remaining = 3 - otpFailedAttempts;
+                        errorBox.innerHTML = '❌ <strong>Authentication Failed:</strong> Invalid One-Time Passcode. The passcode <code>' + otp + '</code> was rejected by your issuing bank.<br><strong>' + remaining + ' attempt(s) remaining</strong> before transaction is declined.<br><small style="color: #64748B;">For testing: Use designated test passcode <strong>123456</strong>.</small>';
+                        errorBox.style.display = 'block';
+                        otpInput.style.borderColor = '#EF4444';
+                        void otpInput.offsetWidth;
+                        otpInput.classList.add('ep-shake');
+                        otpInput.value = '';
+                        otpInput.focus();
+                    } else {
+                        // Max attempts exceeded (3 failures) -> Decline transaction via IPN webhook
+                        progress.style.display = 'block';
+                        progress.style.background = '#FEF2F2';
+                        progress.style.color = '#991B1B';
+                        progress.innerHTML = '❌ Maximum OTP attempts exceeded. Transaction DECLINED by Bank. Notifying gateway...';
+                        btn.disabled = true;
+
+                        const failPayload = {
+                            merchant_id: '<?php echo esc_js($p_merchant); ?>',
+                            order_id: <?php echo intval($p_order_id); ?>,
+                            amount: '<?php echo esc_js($p_amount); ?>',
+                            timestamp: <?php echo intval($p_time); ?>,
+                            signature: '<?php echo esc_js($p_sig); ?>',
+                            status: 'DECLINED',
+                            transaction_id: 'FIN-NAM-DECLINED-' + Date.now()
+                        };
+
+                        fetch('<?php echo esc_url($webhook_url); ?>', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(failPayload)
+                        })
+                        .finally(() => {
+                            setTimeout(() => {
+                                window.location.href = '<?php echo esc_url(home_url('/customer-dashboard?payment_declined=1&order_id=' . $p_order_id)); ?>';
+                            }, 1000);
+                        });
+                    }
+                }, 900);
+
+                return; // Strictly stop execution! Do not settle or issue tickets!
+            }
+
+            // Valid OTP (123456) -> Proceed with authorized settlement
+            progress.style.display = 'block';
+            progress.style.background = '#ECFDF5';
+            progress.style.color = '#065F46';
+            progress.innerHTML = '⏳ 3D-Secure Authenticated! Authorizing transaction with Bank of Namibia clearing switch...';
             btn.disabled = true;
             btn.style.opacity = '0.6';
 

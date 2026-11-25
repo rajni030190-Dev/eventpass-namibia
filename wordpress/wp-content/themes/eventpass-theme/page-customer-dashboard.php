@@ -145,6 +145,36 @@ get_header();
         </div>
     <?php endif; ?>
 
+    <?php if ( isset($_GET['payment_declined']) ) : ?>
+        <div class="no-print" style="background: #FEF2F2; border: 1px solid #FCA5A5; color: #991B1B; padding: 1.15rem 1.5rem; border-radius: 14px; font-size: 0.95rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; box-shadow: 0 4px 14px rgba(239,68,68,0.12);">
+            <div style="display: flex; align-items: center; gap: 0.85rem;">
+                <span style="font-size: 1.6rem;">🚫</span>
+                <div>
+                    <strong style="color: #991B1B; font-size: 1rem;">Payment Declined (3D-Secure Authentication Failed)</strong>
+                    <p style="margin: 0.2rem 0 0; font-size: 0.85rem; color: #7F1D1D; line-height: 1.4;">The transaction was rejected by your issuing bank switch because the One-Time Passcode (OTP) was invalid. No funds were debited, and no event tickets were issued.</p>
+                </div>
+            </div>
+            <a href="<?php echo esc_url(home_url('/explore-events')); ?>" class="ep-btn ep-btn-sm" style="background: #991B1B; color: #ffffff; border: none; font-weight: 700; padding: 0.6rem 1.2rem; border-radius: 8px;">
+                Try Another Event &rarr;
+            </a>
+        </div>
+    <?php endif; ?>
+
+    <?php if ( isset($_GET['payment_cancelled']) ) : ?>
+        <div class="no-print" style="background: #FFFBEB; border: 1px solid #FCD34D; color: #92400E; padding: 1.15rem 1.5rem; border-radius: 14px; font-size: 0.95rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.85rem;">
+                <span style="font-size: 1.6rem;">⚠️</span>
+                <div>
+                    <strong style="color: #78350F; font-size: 1rem;">Checkout Cancelled</strong>
+                    <p style="margin: 0.2rem 0 0; font-size: 0.85rem; color: #92400E;">You cancelled the 3D-Secure payment session. The order has been marked as cancelled and reserved ticket inventory returned to the pool.</p>
+                </div>
+            </div>
+            <a href="<?php echo esc_url(home_url('/explore-events')); ?>" class="ep-btn ep-btn-sm" style="background: #0B1B3D; color: #00E5FF; border: none; font-weight: 700;">
+                Return to Events &rarr;
+            </a>
+        </div>
+    <?php endif; ?>
+
     <?php if ( isset($_GET['verify_resent']) ) : ?>
         <div class="no-print" style="background: #F0FDF4; border: 1px solid #86EFAC; color: #166534; padding: 1rem 1.5rem; border-radius: 12px; font-size: 0.95rem; margin-bottom: 1.5rem;">
             ✓ A new email verification link has been dispatched to <strong><?php echo esc_html($user_email); ?></strong>. Please check your inbox.
@@ -360,7 +390,9 @@ get_header();
                                             <?php if ($ord_status === 'completed') : ?>
                                                 <span style="background: #ECFDF5; color: #065F46; padding: 3px 9px; border-radius: 999px; font-weight: 700; font-size: 11px;">PAID / ISSUED</span>
                                             <?php elseif ($ord_status === 'cancelled') : ?>
-                                                <span style="background: #FEF2F2; color: #991B1B; padding: 3px 9px; border-radius: 999px; font-weight: 700; font-size: 11px;">CANCELLED</span>
+                                                <span style="background: #FFFBEB; color: #92400E; padding: 3px 9px; border-radius: 999px; font-weight: 700; font-size: 11px;">CANCELLED</span>
+                                            <?php elseif ($ord_status === 'failed' || $ord_status === 'declined') : ?>
+                                                <span style="background: #FEF2F2; color: #991B1B; padding: 3px 9px; border-radius: 999px; font-weight: 700; font-size: 11px;">DECLINED / FAILED</span>
                                             <?php else : ?>
                                                 <span style="background: #FFFBEB; color: #92400E; padding: 3px 9px; border-radius: 999px; font-weight: 700; font-size: 11px;">PENDING VERIFICATION</span>
                                             <?php endif; ?>
