@@ -123,6 +123,10 @@ function eventpass_create_order($args) {
         return new WP_Error('invalid_event', __('Invalid event ID provided for booking.', 'eventpass-core'));
     }
 
+    if ($user_id <= 0) {
+        return new WP_Error('auth_required', __('An active registered customer account is required to book tickets. Please sign in or create an account to proceed.', 'eventpass-core'));
+    }
+
     if (empty($customer_name) || empty($customer_email)) {
         return new WP_Error('missing_contact', __('Customer full name and email are required.', 'eventpass-core'));
     }

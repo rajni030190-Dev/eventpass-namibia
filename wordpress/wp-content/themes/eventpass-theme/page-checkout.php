@@ -21,6 +21,102 @@ $order_pending   = false;
 $gateway_session = [];
 $order_result    = null;
 $checkout_error  = '';
+$auth_error      = '';
+$auth_success    = '';
+
+// 0a. Handle Inline Checkout Sign In
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_checkout_auth_login'])) {
+    if (!isset($_POST['ep_auth_nonce']) || !wp_verify_nonce($_POST['ep_auth_nonce'], 'ep_checkout_auth_action')) {
+        $auth_error = __('Security session expired. Please refresh and try again.', 'eventpass-core');
+    } else {
+        $log_user = sanitize_text_field($_POST['auth_login'] ?? '');
+        $log_pass = $_POST['auth_password'] ?? '';
+        
+        $signon_args = [
+            'user_login'    => $log_user,
+            'user_password' => $log_pass,
+            'remember'      => true,
+        ];
+        $signon_result = wp_signon($signon_args, is_ssl());
+        if (is_wp_error($signon_result)) {
+            $auth_error = $signon_result->get_error_message();
+        } else {
+            $current_user = $signon_result;
+            $is_logged_in = true;
+            wp_set_current_user($current_user->ID);
+            wp_set_auth_cookie($current_user->ID, true);
+            $default_name  = $current_user->display_name ?: $current_user->user_login;
+            $default_email = $current_user->user_email;
+            $default_phone = get_user_meta($current_user->ID, 'phone_number', true) ?: '';
+            $auth_success = __('Signed in successfully! Your account is verified for ticket booking.', 'eventpass-core');
+        }
+    }
+}
+
+// 0b. Handle Inline Checkout Registration
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_checkout_auth_register'])) {
+    if (!isset($_POST['ep_auth_nonce']) || !wp_verify_nonce($_POST['ep_auth_nonce'], 'ep_checkout_auth_action')) {
+        $auth_error = __('Security session expired. Please refresh and try again.', 'eventpass-core');
+    } else {
+        $reg_name  = sanitize_text_field($_POST['reg_name'] ?? '');
+        $reg_email = sanitize_email($_POST['reg_email'] ?? '');
+        $reg_phone = sanitize_text_field($_POST['reg_phone'] ?? '');
+        $reg_pass  = $_POST['reg_password'] ?? '';
+
+        if (empty($reg_name) || empty($reg_email) || empty($reg_pass)) {
+            $auth_error = __('Please complete all required registration fields.', 'eventpass-core');
+        } elseif (!is_email($reg_email)) {
+            $auth_error = __('Please enter a valid email address.', 'eventpass-core');
+        } elseif (email_exists($reg_email)) {
+            $auth_error = __('An account with this email address already exists. Please use the Sign In tab.', 'eventpass-core');
+        } elseif (strlen($reg_pass) < 8) {
+            $auth_error = __('Password must be at least 8 characters long.', 'eventpass-core');
+        } else {
+            $base_username = sanitize_user(current(explode('@', $reg_email)));
+            $username = $base_username;
+            $i = 1;
+            while (username_exists($username)) {
+                $username = $base_username . $i;
+                $i++;
+            }
+            $parts = explode(' ', $reg_name, 2);
+            $first = $parts[0] ?? '';
+            $last  = $parts[1] ?? '';
+
+            $new_user_id = wp_insert_user([
+                'user_login'   => $username,
+                'user_email'   => $reg_email,
+                'user_pass'    => $reg_pass,
+                'display_name' => $reg_name,
+                'first_name'   => $first,
+                'last_name'    => $last,
+                'role'         => 'event_customer',
+            ]);
+
+            if (is_wp_error($new_user_id)) {
+                $auth_error = $new_user_id->get_error_message();
+            } else {
+                if (!empty($reg_phone)) {
+                    update_user_meta($new_user_id, 'phone_number', $reg_phone);
+                }
+                update_user_meta($new_user_id, '_ep_email_verified', 1);
+
+                if (class_exists('EventPass_Notification_Engine')) {
+                    EventPass_Notification_Engine::notify_customer_welcome($new_user_id);
+                }
+
+                wp_set_current_user($new_user_id);
+                wp_set_auth_cookie($new_user_id, true);
+                $current_user = wp_get_current_user();
+                $is_logged_in = true;
+                $default_name  = $reg_name;
+                $default_email = $reg_email;
+                $default_phone = $reg_phone;
+                $auth_success = __('Account created and verified! You are now signed in to complete booking.', 'eventpass-core');
+            }
+        }
+    }
+}
 
 // 1. Handle Payment Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_checkout_action'])) {
@@ -43,7 +139,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_checkout_action'])
             }
         }
 
-        if (empty($items)) {
+        if (!$is_logged_in) {
+            $checkout_error = __('An active registered customer account is required to book tickets. Please sign in or register below.', 'eventpass-core');
+        } elseif (empty($items)) {
             $checkout_error = __('Please select at least one ticket to purchase.', 'eventpass-core');
         } else {
             // Create Order and reserve inventory
@@ -53,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_checkout_action'])
                 'customer_name'  => $customer_name,
                 'customer_email' => $customer_email,
                 'customer_phone' => $customer_phone,
-                'user_id'        => $is_logged_in ? $current_user->ID : 0,
+                'user_id'        => $current_user->ID,
                 'payment_method' => $payment_method,
             ]);
 
@@ -841,98 +939,235 @@ if ($event && $event->post_type === 'ep_event') {
 
     <?php else : ?>
         <!-- Checkout Form State -->
+        <?php if (!empty($auth_success)) : ?>
+            <div style="background: #ECFDF5; border: 1px solid #10B981; color: #065F46; padding: 1rem 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.65rem;">
+                <span style="font-size: 1.2rem;">✓</span>
+                <span><?php echo esc_html($auth_success); ?></span>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($auth_error)) : ?>
+            <div style="background: #FEF2F2; border: 1px solid #EF4444; color: #991B1B; padding: 1rem 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.65rem;">
+                <span style="font-size: 1.2rem;">⚠️</span>
+                <span><?php echo esc_html($auth_error); ?></span>
+            </div>
+        <?php endif; ?>
+
         <?php if (!empty($checkout_error)) : ?>
-            <div style="background: #FEF2F2; border: 1px solid #EF4444; color: #991B1B; padding: 1rem 1.5rem; border-radius: 8px; margin-bottom: 2rem; font-weight: 600;">
-                ⚠️ <?php echo esc_html($checkout_error); ?>
+            <div style="background: #FEF2F2; border: 1px solid #EF4444; color: #991B1B; padding: 1rem 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.65rem;">
+                <span style="font-size: 1.2rem;">⚠️</span>
+                <span><?php echo esc_html($checkout_error); ?></span>
             </div>
         <?php endif; ?>
 
         <div style="display: grid; grid-template-columns: 1.7fr 1.3fr; gap: 3rem; align-items: start;">
             <!-- Left Column: Attendee & Payment Form -->
             <div style="background: #ffffff; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-lg); padding: 2.5rem; box-shadow: var(--ep-shadow-sm);">
-                <form id="epCheckoutForm" action="<?php echo esc_url(home_url('/checkout')); ?>" method="POST">
-                    <?php wp_nonce_field('ep_checkout_nonce', 'ep_checkout_nonce'); ?>
-                    <input type="hidden" name="ep_checkout_action" value="1">
-                    <input type="hidden" name="event_id" value="<?php echo esc_attr($event_id); ?>">
 
-                    <?php foreach ($cart_items as $c_item) : ?>
-                        <input type="hidden" name="tickets[<?php echo esc_attr($c_item['id']); ?>]" value="<?php echo esc_attr($c_item['quantity']); ?>">
-                    <?php endforeach; ?>
-
-                    <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--ep-navy); margin-bottom: 1.5rem;">1. Attendee Contact Details</h3>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
-                        <div>
-                            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Full Name *</label>
-                            <input type="text" name="customer_name" required value="<?php echo esc_attr($default_name ?: 'Johannes Shilongo'); ?>" placeholder="First and Last Name" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
+                <?php if ($is_logged_in) : ?>
+                    <!-- Logged In Status Banner -->
+                    <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <span style="font-size: 1.35rem;">👤</span>
+                            <div>
+                                <strong style="color: var(--ep-navy); font-size: 0.95rem; display: block;">
+                                    Verified Attendee: <?php echo esc_html($default_name); ?>
+                                </strong>
+                                <span style="font-size: 0.8rem; color: #64748B;">
+                                    <?php echo esc_html($default_email); ?> • Passes will be linked to your Customer Dashboard
+                                </span>
+                            </div>
                         </div>
-                        <div>
-                            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Email Address *</label>
-                            <input type="email" name="customer_email" required value="<?php echo esc_attr($default_email ?: 'johannes@example.com.na'); ?>" placeholder="you@domain.com.na" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
-                        </div>
+                        <a href="<?php echo esc_url(wp_logout_url(add_query_arg($_GET, home_url('/checkout')))); ?>" style="font-size: 0.82rem; font-weight: 700; color: #EF4444; text-decoration: underline;">
+                            Sign Out / Switch
+                        </a>
                     </div>
 
-                    <div style="margin-bottom: 2rem;">
-                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Mobile Phone (+264) *</label>
-                        <input type="tel" name="customer_phone" required value="<?php echo esc_attr($default_phone ?: '+264 81 234 5678'); ?>" placeholder="+264 81 234 5678" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
-                        <small style="color: #64748B; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Used for SMS ticket dispatch and gate customer support.</small>
-                    </div>
+                    <form id="epCheckoutForm" action="<?php echo esc_url(add_query_arg($_GET, home_url('/checkout'))); ?>" method="POST">
+                        <?php wp_nonce_field('ep_checkout_nonce', 'ep_checkout_nonce'); ?>
+                        <input type="hidden" name="ep_checkout_action" value="1">
+                        <input type="hidden" name="event_id" value="<?php echo esc_attr($event_id); ?>">
 
-                    <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--ep-navy); margin-bottom: 1.25rem; border-top: 1px solid var(--ep-slate-100); padding-top: 1.5rem;">
-                        2. Select Payment Gateway (Namibia)
-                    </h3>
+                        <?php foreach ($cart_items as $c_item) : ?>
+                            <input type="hidden" name="tickets[<?php echo esc_attr($c_item['id']); ?>]" value="<?php echo esc_attr($c_item['quantity']); ?>">
+                        <?php endforeach; ?>
 
-                    <!-- Payment Method 1: Finatic Namibia -->
-                    <div style="border: 2px solid var(--ep-teal); border-radius: var(--ep-radius-md); padding: 1.25rem; background: rgba(0,180,216,0.04); margin-bottom: 1rem; cursor: pointer;">
-                        <label style="display: flex; gap: 0.75rem; align-items: flex-start; cursor: pointer;">
-                            <input type="radio" name="payment_method" value="finatic" checked style="margin-top: 0.25rem;">
-                            <div style="flex: 1;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                                    <strong style="color: var(--ep-navy); font-size: 1.05rem;">Finatic Namibia Payment Gateway</strong>
-                                    <span style="font-size: 0.75rem; background: var(--ep-teal-dark); color: #fff; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700;">OFFICIAL PARTNER</span>
+                        <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--ep-navy); margin-bottom: 1.5rem;">1. Attendee Contact Details</h3>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Full Name *</label>
+                                <input type="text" name="customer_name" required value="<?php echo esc_attr($default_name); ?>" placeholder="First and Last Name" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Email Address *</label>
+                                <input type="email" name="customer_email" required value="<?php echo esc_attr($default_email); ?>" placeholder="you@domain.com.na" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 2rem;">
+                            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Mobile Phone (+264) *</label>
+                            <input type="tel" name="customer_phone" required value="<?php echo esc_attr($default_phone); ?>" placeholder="+264 81 234 5678" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
+                            <small style="color: #64748B; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Used for SMS ticket dispatch and gate customer support.</small>
+                        </div>
+
+                        <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--ep-navy); margin-bottom: 1.25rem; border-top: 1px solid var(--ep-slate-100); padding-top: 1.5rem;">
+                            2. Select Payment Gateway (Namibia)
+                        </h3>
+
+                        <!-- Payment Method 1: Finatic Namibia -->
+                        <div style="border: 2px solid var(--ep-teal); border-radius: var(--ep-radius-md); padding: 1.25rem; background: rgba(0,180,216,0.04); margin-bottom: 1rem; cursor: pointer;">
+                            <label style="display: flex; gap: 0.75rem; align-items: flex-start; cursor: pointer;">
+                                <input type="radio" name="payment_method" value="finatic" checked style="margin-top: 0.25rem;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                        <strong style="color: var(--ep-navy); font-size: 1.05rem;">Finatic Namibia Payment Gateway</strong>
+                                        <span style="font-size: 0.75rem; background: var(--ep-teal-dark); color: #fff; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700;">OFFICIAL PARTNER</span>
+                                    </div>
+                                    <p style="font-size: 0.85rem; color: var(--ep-slate-600); margin: 0 0 0.5rem; line-height: 1.5;">
+                                        Accepts Visa & Mastercard debit/credit cards issued by Bank Windhoek, FNB Namibia, Standard Bank Namibia, Nedbank Namibia, and international cards.
+                                    </p>
+                                    <span style="font-size: 0.75rem; color: var(--ep-success); font-weight: 700;">✓ Bank of Namibia NPS Authorized • 256-bit TLS Encrypted</span>
                                 </div>
-                                <p style="font-size: 0.85rem; color: var(--ep-slate-600); margin: 0 0 0.5rem; line-height: 1.5;">
-                                    Accepts Visa & Mastercard debit/credit cards issued by Bank Windhoek, FNB Namibia, Standard Bank Namibia, Nedbank Namibia, and international cards.
-                                </p>
-                                <span style="font-size: 0.75rem; color: var(--ep-success); font-weight: 700;">✓ Bank of Namibia NPS Authorized • 256-bit TLS Encrypted</span>
-                            </div>
-                        </label>
+                            </label>
+                        </div>
+
+                        <!-- Payment Method 2: DPO PayGate -->
+                        <div style="border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-md); padding: 1.25rem; background: #fff; margin-bottom: 1rem; cursor: pointer;">
+                            <label style="display: flex; gap: 0.75rem; align-items: flex-start; cursor: pointer;">
+                                <input type="radio" name="payment_method" value="paygate" style="margin-top: 0.25rem;">
+                                <div style="flex: 1;">
+                                    <strong style="color: var(--ep-navy); font-size: 1rem; display: block; margin-bottom: 0.25rem;">DPO PayGate (Regional Cards)</strong>
+                                    <p style="font-size: 0.85rem; color: var(--ep-slate-600); margin: 0; line-height: 1.5;">
+                                        Southern African regional payment gateway for credit cards and virtual cards.
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Payment Method 3: Instant EFT -->
+                        <div style="border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-md); padding: 1.25rem; background: #fff; margin-bottom: 1.75rem; cursor: pointer;">
+                            <label style="display: flex; gap: 0.75rem; align-items: flex-start; cursor: pointer;">
+                                <input type="radio" name="payment_method" value="eft" style="margin-top: 0.25rem;">
+                                <div style="flex: 1;">
+                                    <strong style="color: var(--ep-navy); font-size: 1rem; display: block; margin-bottom: 0.25rem;">Instant EFT / Bank Transfer</strong>
+                                    <p style="font-size: 0.85rem; color: var(--ep-slate-600); margin: 0; line-height: 1.5;">
+                                        Direct electronic funds transfer via Namibian clearing houses.
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <button type="submit" id="epPaySubmitBtn" class="ep-btn ep-btn-primary ep-btn-lg" style="width: 100%; justify-content: center; height: 52px; font-size: 1.1rem;">
+                            <span>Pay N$ <?php echo number_format($total_amount, 2); ?> via Finatic Gateway &rarr;</span>
+                        </button>
+                        
+                        <p style="text-align: center; font-size: 0.75rem; color: #64748B; margin-top: 0.75rem;">
+                            🔒 By confirming payment, you agree to EventPass Namibia Terms & Conditions and Attendee Refund Policy.
+                        </p>
+                    </form>
+
+                <?php else : ?>
+                    <!-- Registration & Login Required Gate -->
+                    <div style="background: linear-gradient(135deg, #0B1B3D 0%, #060E20 100%); color: #ffffff; border-radius: 16px; padding: 2rem; border: 1px solid rgba(0, 229, 255, 0.35); box-shadow: 0 10px 30px rgba(11,27,61,0.25);">
+                        <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem;">
+                            <span style="background: rgba(0,229,255,0.18); color: var(--ep-cyan); font-size: 0.78rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 4px; text-transform: uppercase;">
+                                🔒 Account Required
+                            </span>
+                            <span style="font-size: 0.8rem; color: #94A3B8;">Identity & QR Pass Security</span>
+                        </div>
+                        <h3 style="color: #ffffff; font-size: 1.4rem; font-weight: 800; margin: 0 0 0.5rem;">
+                            Register or Sign In to Book Tickets
+                        </h3>
+                        <p style="color: #CBD5E1; font-size: 0.88rem; line-height: 1.5; margin: 0 0 1.5rem;">
+                            To prevent ticket scalping and ensure your digital QR entry passes are saved to your personal portal, you must be registered before proceeding to payment.
+                        </p>
+
+                        <!-- Toggle Tabs: Sign In / Create Account -->
+                        <div style="display: flex; gap: 0.5rem; background: rgba(255,255,255,0.08); padding: 0.35rem; border-radius: 10px; margin-bottom: 1.5rem;">
+                            <button type="button" id="tabAuthRegister" onclick="switchCheckoutAuthTab('register')" style="flex: 1; padding: 0.7rem 1rem; border: none; border-radius: 8px; font-weight: 700; font-size: 0.88rem; cursor: pointer; background: var(--ep-teal); color: #ffffff; transition: all 0.2s ease;">
+                                <span>🎟️ Create Free Account</span>
+                            </button>
+                            <button type="button" id="tabAuthLogin" onclick="switchCheckoutAuthTab('login')" style="flex: 1; padding: 0.7rem 1rem; border: none; border-radius: 8px; font-weight: 700; font-size: 0.88rem; cursor: pointer; background: transparent; color: #94A3B8; transition: all 0.2s ease;">
+                                <span>👤 Existing Customer Sign In</span>
+                            </button>
+                        </div>
+
+                        <!-- TAB 1: QUICK REGISTRATION -->
+                        <div id="checkoutAuthRegisterPane">
+                            <form action="<?php echo esc_url(add_query_arg($_GET, home_url('/checkout'))); ?>" method="POST">
+                                <?php wp_nonce_field('ep_checkout_auth_action', 'ep_auth_nonce'); ?>
+                                <input type="hidden" name="ep_checkout_auth_register" value="1">
+                                <input type="hidden" name="event_id" value="<?php echo esc_attr($event_id); ?>">
+                                <?php foreach ($cart_items as $c_item) : ?>
+                                    <input type="hidden" name="tickets[<?php echo esc_attr($c_item['id']); ?>]" value="<?php echo esc_attr($c_item['quantity']); ?>">
+                                <?php endforeach; ?>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                    <div>
+                                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #E2E8F0; margin-bottom: 0.35rem;">Full Name *</label>
+                                        <input type="text" name="reg_name" required placeholder="e.g. Johannes Shilongo" style="width: 100%; padding: 0.75rem 0.9rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 0.92rem; background: #ffffff; color: #0F172A;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #E2E8F0; margin-bottom: 0.35rem;">Email Address *</label>
+                                        <input type="email" name="reg_email" required placeholder="you@domain.com.na" style="width: 100%; padding: 0.75rem 0.9rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 0.92rem; background: #ffffff; color: #0F172A;">
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                                    <div>
+                                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #E2E8F0; margin-bottom: 0.35rem;">Mobile Phone (+264) *</label>
+                                        <input type="tel" name="reg_phone" required placeholder="+264 81 234 5678" style="width: 100%; padding: 0.75rem 0.9rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 0.92rem; background: #ffffff; color: #0F172A;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #E2E8F0; margin-bottom: 0.35rem;">Create Password * (min 8 chars)</label>
+                                        <input type="password" name="reg_password" required minlength="8" placeholder="••••••••" style="width: 100%; padding: 0.75rem 0.9rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 0.92rem; background: #ffffff; color: #0F172A;">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="ep-btn ep-btn-primary" style="width: 100%; justify-content: center; height: 50px; font-size: 1rem; font-weight: 700;">
+                                    <span>Register & Unlock Payment &rarr;</span>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- TAB 2: QUICK SIGN IN -->
+                        <div id="checkoutAuthLoginPane" style="display: none;">
+                            <form action="<?php echo esc_url(add_query_arg($_GET, home_url('/checkout'))); ?>" method="POST">
+                                <?php wp_nonce_field('ep_checkout_auth_action', 'ep_auth_nonce'); ?>
+                                <input type="hidden" name="ep_checkout_auth_login" value="1">
+                                <input type="hidden" name="event_id" value="<?php echo esc_attr($event_id); ?>">
+                                <?php foreach ($cart_items as $c_item) : ?>
+                                    <input type="hidden" name="tickets[<?php echo esc_attr($c_item['id']); ?>]" value="<?php echo esc_attr($c_item['quantity']); ?>">
+                                <?php endforeach; ?>
+
+                                <div style="margin-bottom: 1rem;">
+                                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #E2E8F0; margin-bottom: 0.35rem;">Email Address or Username *</label>
+                                    <input type="text" name="auth_login" required placeholder="you@domain.com.na" style="width: 100%; padding: 0.75rem 0.9rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 0.92rem; background: #ffffff; color: #0F172A;">
+                                </div>
+
+                                <div style="margin-bottom: 1.25rem;">
+                                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #E2E8F0; margin-bottom: 0.35rem;">Password *</label>
+                                    <input type="password" name="auth_password" required placeholder="••••••••" style="width: 100%; padding: 0.75rem 0.9rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 0.92rem; background: #ffffff; color: #0F172A;">
+                                </div>
+
+                                <button type="submit" class="ep-btn ep-btn-primary" style="width: 100%; justify-content: center; height: 50px; font-size: 1rem; font-weight: 700;">
+                                    <span>Sign In & Unlock Payment &rarr;</span>
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
-                    <!-- Payment Method 2: DPO PayGate -->
-                    <div style="border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-md); padding: 1.25rem; background: #fff; margin-bottom: 1rem; cursor: pointer;">
-                        <label style="display: flex; gap: 0.75rem; align-items: flex-start; cursor: pointer;">
-                            <input type="radio" name="payment_method" value="paygate" style="margin-top: 0.25rem;">
-                            <div style="flex: 1;">
-                                <strong style="color: var(--ep-navy); font-size: 1rem; display: block; margin-bottom: 0.25rem;">DPO PayGate (Regional Cards)</strong>
-                                <p style="font-size: 0.85rem; color: var(--ep-slate-600); margin: 0; line-height: 1.5;">
-                                    Southern African regional payment gateway for credit cards and virtual cards.
-                                </p>
-                            </div>
-                        </label>
+                    <!-- Locked Payment Gate Indicator -->
+                    <div style="background: #F8FAFC; border: 2px dashed #CBD5E1; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; color: #64748B; margin-top: 1.5rem;">
+                        <span style="font-size: 2.25rem; display: block; margin-bottom: 0.5rem;">🔒</span>
+                        <strong style="color: var(--ep-navy); font-size: 1.05rem; display: block; margin-bottom: 0.35rem;">Payment Gateway Locked</strong>
+                        <p style="font-size: 0.88rem; max-width: 440px; margin: 0 auto; line-height: 1.5;">
+                            Please register or sign in above to select your payment method (Finatic Gateway, DPO, or Instant EFT) and complete your ticket order.
+                        </p>
                     </div>
+                <?php endif; ?>
 
-                    <!-- Payment Method 3: Instant EFT -->
-                    <div style="border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-md); padding: 1.25rem; background: #fff; margin-bottom: 1.75rem; cursor: pointer;">
-                        <label style="display: flex; gap: 0.75rem; align-items: flex-start; cursor: pointer;">
-                            <input type="radio" name="payment_method" value="eft" style="margin-top: 0.25rem;">
-                            <div style="flex: 1;">
-                                <strong style="color: var(--ep-navy); font-size: 1rem; display: block; margin-bottom: 0.25rem;">Instant EFT / Bank Transfer</strong>
-                                <p style="font-size: 0.85rem; color: var(--ep-slate-600); margin: 0; line-height: 1.5;">
-                                    Direct electronic funds transfer via Namibian clearing houses.
-                                </p>
-                            </div>
-                        </label>
-                    </div>
-
-                    <button type="submit" id="epPaySubmitBtn" class="ep-btn ep-btn-primary ep-btn-lg" style="width: 100%; justify-content: center; height: 52px; font-size: 1.1rem;">
-                        <span>Pay N$ <?php echo number_format($total_amount, 2); ?> via Finatic Gateway &rarr;</span>
-                    </button>
-                    
-                    <p style="text-align: center; font-size: 0.75rem; color: #64748B; margin-top: 0.75rem;">
-                        🔒 By confirming payment, you agree to EventPass Namibia Terms & Conditions and Attendee Refund Policy.
-                    </p>
-                </form>
             </div>
 
             <!-- Right Column: Order Summary -->
@@ -988,6 +1223,25 @@ if ($event && $event->post_type === 'ep_event') {
         </div>
     <?php endif; ?>
 
+    <script>
+    function switchCheckoutAuthTab(tab) {
+        var regPane = document.getElementById('checkoutAuthRegisterPane');
+        var logPane = document.getElementById('checkoutAuthLoginPane');
+        var regTab  = document.getElementById('tabAuthRegister');
+        var logTab  = document.getElementById('tabAuthLogin');
+        if (tab === 'login') {
+            if (regPane) regPane.style.display = 'none';
+            if (logPane) logPane.style.display = 'block';
+            if (regTab) { regTab.style.background = 'transparent'; regTab.style.color = '#94A3B8'; }
+            if (logTab) { logTab.style.background = 'var(--ep-teal)'; logTab.style.color = '#ffffff'; }
+        } else {
+            if (regPane) regPane.style.display = 'block';
+            if (logPane) logPane.style.display = 'none';
+            if (regTab) { regTab.style.background = 'var(--ep-teal)'; regTab.style.color = '#ffffff'; }
+            if (logTab) { logTab.style.background = 'transparent'; logTab.style.color = '#94A3B8'; }
+        }
+    }
+    </script>
 </div>
 
 <?php get_footer(); ?>
