@@ -59,6 +59,17 @@ define( 'BREVO_SMTP_KEY', getenv('BREVO_SMTP_KEY') ?: '' );   // Provide Brevo S
 define( 'BREVO_SENDER_EMAIL', getenv('BREVO_SENDER_EMAIL') ?: 'no-reply@eventpass.com.na' );
 define( 'BREVO_SENDER_NAME', getenv('BREVO_SENDER_NAME') ?: 'EventPass Namibia' );
 
+// =============================================================================
+// FINATIC NAMIBIA PAYMENT GATEWAY CONFIGURATION (SOW MODULE 5)
+// Finatic Technologies is the primary Namibian payment processor (Visa / MC / EFT).
+// When staging or running demo test transactions, leave FINATIC_LIVE_MODE as false.
+// When client provides official live merchant credentials, uncomment & fill below:
+// =============================================================================
+// define( 'FINATIC_LIVE_MODE', true ); // Set true to deduct real money via live gateway
+// define( 'FINATIC_MERCHANT_ID', 'FINATIC_MERCHANT_ID_HERE' );
+// define( 'FINATIC_API_KEY', 'FINATIC_PUBLIC_API_KEY_HERE' );
+// define( 'FINATIC_SECRET_KEY', 'FINATIC_SECRET_HMAC_KEY_HERE' );
+
 
 /** Absolute path to the WordPress directory. */
 if ( ! defined( 'ABSPATH' ) ) {
