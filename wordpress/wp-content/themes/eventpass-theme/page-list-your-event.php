@@ -39,6 +39,31 @@ get_header();
 <!-- Interactive Revenue Calculator & Value Proposition -->
 <div class="container" style="padding: 5rem 1.5rem 5.5rem;">
     
+    <style>
+    @media (max-width: 768px) {
+        .ep-calc-card {
+            padding: 1.5rem 1rem !important;
+            border-radius: 14px !important;
+            margin: 0 !important;
+        }
+        .ep-calc-grid {
+            grid-template-columns: 1fr !important;
+            gap: 1.5rem !important;
+        }
+        #calcNetDisplay {
+            font-size: 1.85rem !important;
+        }
+        #calcGrossDisplay {
+            font-size: 1.5rem !important;
+        }
+    }
+    @media (max-width: 480px) {
+        .ep-calc-card {
+            padding: 1.25rem 0.85rem !important;
+        }
+    }
+    </style>
+
     <!-- Interactive Calculator Section -->
     <div id="calculator" style="margin-bottom: 5.5rem;">
         <div style="text-align: center; max-width: 650px; margin: 0 auto 2.5rem;">
@@ -47,8 +72,8 @@ get_header();
             <p style="color: var(--ep-slate-600); font-size: 1rem;">Transparent 5% platform fee with zero hidden hosting charges. See how much you take home.</p>
         </div>
 
-        <div style="max-width: 900px; margin: 0 auto; background: linear-gradient(135deg, #060E20 0%, #0B1B3D 100%); border: 1px solid rgba(0,229,255,0.25); border-radius: 20px; padding: 2.5rem; color: #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
-            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2.5rem; align-items: center;">
+        <div class="ep-calc-card" style="max-width: 900px; margin: 0 auto; background: linear-gradient(135deg, #060E20 0%, #0B1B3D 100%); border: 1px solid rgba(0,229,255,0.25); border-radius: 20px; padding: 2.5rem; color: #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+            <div class="ep-calc-grid" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2.5rem; align-items: center;">
                 
                 <!-- Inputs -->
                 <div>

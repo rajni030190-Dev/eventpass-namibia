@@ -1567,3 +1567,36 @@ img {
                 padding: 1rem 1.25rem;
             }
         }
+
+        /* Responsive Grid & Mobile Viewport Fixes */
+        @media (max-width: 768px) {
+            .ep-calc-card {
+                padding: 1.5rem 1rem !important;
+                border-radius: 14px !important;
+            }
+            .ep-calc-grid {
+                grid-template-columns: 1fr !important;
+                gap: 1.5rem !important;
+            }
+            #calcNetDisplay {
+                font-size: 1.85rem !important;
+            }
+            #calcGrossDisplay {
+                font-size: 1.5rem !important;
+            }
+            .ep-single-event-grid,
+            .ep-checkout-grid,
+            .ep-dashboard-grid,
+            .ep-hiw-grid {
+                grid-template-columns: 1fr !important;
+                gap: 2rem !important;
+            }
+        }
+        @media (max-width: 480px) {
+            .ep-calc-card {
+                padding: 1.25rem 0.85rem !important;
+            }
+            #calcAttendeesDisplay, #calcPriceDisplay {
+                font-size: 1.1rem !important;
+            }
+        }
