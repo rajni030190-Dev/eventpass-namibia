@@ -21,6 +21,9 @@ class EventPass_Finatic_Gateway {
      * Retrieve Merchant ID
      */
     public static function get_merchant_id() {
+        if (defined('FINATIC_MERCHANT_ID') && !empty(FINATIC_MERCHANT_ID)) {
+            return FINATIC_MERCHANT_ID;
+        }
         return get_option('_ep_finatic_merchant_id', 'EP_NAM_MCH_DEMO');
     }
 
@@ -28,6 +31,9 @@ class EventPass_Finatic_Gateway {
      * Retrieve Public API Key
      */
     public static function get_api_key() {
+        if (defined('FINATIC_API_KEY') && !empty(FINATIC_API_KEY)) {
+            return FINATIC_API_KEY;
+        }
         return get_option('_ep_finatic_api_key', 'fin_pk_live_namibia_2026');
     }
 
@@ -35,6 +41,9 @@ class EventPass_Finatic_Gateway {
      * Retrieve Secret HMAC Key
      */
     public static function get_secret_key() {
+        if (defined('FINATIC_SECRET_KEY') && !empty(FINATIC_SECRET_KEY)) {
+            return FINATIC_SECRET_KEY;
+        }
         return get_option('_ep_finatic_secret_key', 'fin_sk_secret_namibia_hmac_2026');
     }
 
@@ -42,6 +51,9 @@ class EventPass_Finatic_Gateway {
      * Check if test/sandbox mode is active
      */
     public static function is_test_mode() {
+        if (defined('FINATIC_LIVE_MODE') && FINATIC_LIVE_MODE) {
+            return false;
+        }
         return get_option('_ep_finatic_test_mode', 'yes') === 'yes';
     }
 
