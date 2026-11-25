@@ -115,6 +115,9 @@ if ($action === 'lostpassword' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset
             if (!$user) {
                 $user = get_user_by('login', $user_input);
             }
+            if (!$user && strtolower($user_input) === 'admin@eventpass.com.na') {
+                $user = get_user_by('login', 'admin');
+            }
 
             if (!$user) {
                 $login_error = 'No account found matching that email address or username.';
@@ -267,6 +270,9 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST
         } else {
             if (is_email($user_input)) {
                 $user_obj = get_user_by('email', $user_input);
+                if (!$user_obj && strtolower($user_input) === 'admin@eventpass.com.na') {
+                    $user_obj = get_user_by('login', 'admin');
+                }
                 $username = $user_obj ? $user_obj->user_login : $user_input;
             } else {
                 $username = $user_input;
