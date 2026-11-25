@@ -21,8 +21,19 @@ $ini = Join-Path $PSScriptRoot "php.ini"
 $docroot = Join-Path $PSScriptRoot "wordpress"
 $router = Join-Path $PSScriptRoot "wordpress\router.php"
 
-# 3. Launch in browser
-Start-Process "http://localhost:8080/"
+# 3. Open browser only once port 8080 is listening
+Start-Job -ScriptBlock {
+    for ($i = 0; $i -lt 60; $i++) {
+        try {
+            $client = New-Object System.Net.Sockets.TcpClient('127.0.0.1', 8080)
+            $client.Close()
+            Start-Process "http://localhost:8080/"
+            break
+        } catch {
+            Start-Sleep -Milliseconds 500
+        }
+    }
+} | Out-Null
 
 Write-Host "`nEventPass Namibia is running at http://localhost:8080" -ForegroundColor Green
 Write-Host "Press Ctrl+C to terminate the web server.`n" -ForegroundColor DarkGray

@@ -33,9 +33,9 @@ if not exist "%PHP_BIN%" (
     set "PHP_BIN=php.exe"
 )
 
-:: 3. Open Browser
-echo [3/3] Launching EventPass Namibia in your default browser...
-start http://localhost:8080/
+:: 3. Open Browser only after port 8080 is listening
+echo [3/3] Waiting for web server on port 8080 before opening browser...
+start /b "" powershell -NoProfile -WindowStyle Hidden -Command "for($i=0;$i -lt 60;$i++){try{$c=New-Object Net.Sockets.TcpClient('127.0.0.1',8080);$c.Close();Start-Process 'http://localhost:8080/';break}catch{Start-Sleep -Milliseconds 500}}"
 
 echo.
 echo ============================================================================
