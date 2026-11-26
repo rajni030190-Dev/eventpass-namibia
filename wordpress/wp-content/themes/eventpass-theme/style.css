@@ -1650,6 +1650,97 @@ img {
                 gap: 0.85rem !important;
             }
         }
-                font-size: 1.1rem !important;
+
+        /* ==========================================================================
+           MODERN SCROLL REVEAL ANIMATIONS & MICRO-INTERACTIONS
+           ========================================================================== */
+        .ep-reveal {
+            opacity: 0;
+            transform: translateY(22px);
+            transition:
+                opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: opacity, transform;
+        }
+
+        .ep-reveal.ep-reveal-fade {
+            transform: none;
+        }
+
+        .ep-reveal.ep-reveal-scale {
+            transform: translateY(16px) scale(0.97);
+        }
+
+        .ep-reveal.ep-is-visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .ep-btn {
+            transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+                        box-shadow 0.22s ease,
+                        background-color 0.22s ease,
+                        border-color 0.22s ease,
+                        color 0.22s ease;
+        }
+
+        .ep-btn-secondary:hover,
+        .ep-btn-outline:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(11, 27, 61, 0.12);
+        }
+
+        .ep-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .ep-pass-card,
+        .ep-filters-card,
+        .ep-dashboard-sidebar,
+        .ep-hiw-visual-box {
+            transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+                        box-shadow 0.28s ease,
+                        border-color 0.28s ease;
+        }
+
+        .ep-pass-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 28px -6px rgba(11, 27, 61, 0.12);
+        }
+
+        .ep-nav-link {
+            transition: color 0.2s ease, opacity 0.2s ease;
+        }
+
+        .ep-footer-links a {
+            display: inline-block;
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
+
+        .ep-footer-links a:hover {
+            transform: translateX(3px);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .ep-reveal,
+            .ep-reveal.ep-reveal-fade,
+            .ep-reveal.ep-reveal-scale,
+            .ep-reveal.ep-is-visible {
+                opacity: 1 !important;
+                transform: none !important;
+                transition: none !important;
+                animation: none !important;
+                will-change: auto !important;
+            }
+
+            .ep-btn,
+            .ep-event-card,
+            .ep-cat-card,
+            .ep-hiw-step-card,
+            .ep-pass-card,
+            .ep-hero-collage-item img,
+            .ep-footer-links a {
+                transition: none !important;
+                transform: none !important;
             }
         }
