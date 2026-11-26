@@ -13,16 +13,21 @@ if (!is_user_logged_in()) {
 $current_user = wp_get_current_user();
 $is_admin     = current_user_can('manage_options');
 $is_organiser = in_array('event_organiser', (array)$current_user->roles) || in_array('ep_organiser', (array)$current_user->roles) || current_user_can('edit_ep_events');
+$org_status   = get_user_meta($current_user->ID, '_ep_organiser_status', true);
 
-// RBAC Guard: Restrict access to administrators and accredited organisers only
-if (!$is_admin && !$is_organiser) {
+// RBAC Guard: Restrict access to administrators and approved accredited organisers only
+if (!$is_admin && (!$is_organiser || in_array($org_status, ['pending', 'rejected', 'suspended'], true))) {
+    $status_heading = ($is_organiser && $org_status === 'suspended') ? 'Organiser Account Suspended' : (($is_organiser && $org_status === 'pending') ? 'Organiser Application Pending Review' : 'Organiser Accreditation Required');
+    $status_body    = ($is_organiser && $org_status === 'suspended')
+        ? 'Your organiser account has been temporarily suspended by the Platform Administrator. Please contact EventPass support for assistance.'
+        : (($is_organiser && $org_status === 'pending')
+            ? 'Your organiser application is currently under review by the Platform Administrator. You will receive an email notification once approved.'
+            : 'The Organiser Hub is strictly reserved for verified event organisers and promoters. Your current account is registered as a general attendee.');
     wp_die(
         '<div style="max-width:620px; margin:80px auto; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; text-align:center; padding:45px 35px; background:#fff; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.08); border:1px solid #E2E8F0;">
             <div style="width:72px; height:72px; background:rgba(0,180,216,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem; font-size:2.2rem;">🏢</div>
-            <h1 style="color:#0B1B3D; font-size:1.75rem; font-weight:800; margin-bottom:0.5rem;">Organiser Accreditation Required</h1>
-            <p style="color:#64748B; font-size:1rem; line-height:1.6; margin-bottom:2rem;">
-                The Organiser Hub is strictly reserved for verified event organisers and promoters. Your current account is registered as a general attendee.
-            </p>
+            <h1 style="color:#0B1B3D; font-size:1.75rem; font-weight:800; margin-bottom:0.5rem;">' . esc_html($status_heading) . '</h1>
+            <p style="color:#64748B; font-size:1rem; line-height:1.6; margin-bottom:2rem;">' . esc_html($status_body) . '</p>
             <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
                 <a href="' . esc_url(home_url('/organiser-registration')) . '" style="background:#0B1B3D; color:#fff; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:700; font-size:0.95rem;">Apply for Organiser Accreditation &rarr;</a>
                 <a href="' . esc_url(home_url('/customer-dashboard')) . '" style="background:#00B4D8; color:#fff; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:700; font-size:0.95rem;">Return to Customer Portal</a>
@@ -1196,8 +1201,13 @@ get_header();
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
             <input type="text" id="organiserRosterSearch" onkeyup="filterOrganiserRoster()" placeholder="Search attendee name, email, token..." style="flex: 1; min-width: 240px; padding: 0.6rem 0.9rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.9rem;">
-            <div id="organiserRosterStats" style="font-size: 0.85rem; font-weight: 700; color: var(--ep-navy);">
-                Loading...
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <div id="organiserRosterStats" style="font-size: 0.85rem; font-weight: 700; color: var(--ep-navy);">
+                    Loading...
+                </div>
+                <button type="button" onclick="downloadOrganiserRosterCSV()" class="ep-btn ep-btn-sm ep-btn-outline" style="font-size: 0.78rem; padding: 0.4rem 0.8rem; border-color: var(--ep-teal); color: var(--ep-teal-dark);">
+                    📥 Export CSV
+                </button>
             </div>
         </div>
 
@@ -1225,6 +1235,7 @@ get_header();
 <script>
 const ORG_REST_ATTENDEES_URL = '<?php echo esc_url(rest_url('eventpass/v1/event-attendees')); ?>';
 const ORG_REST_SCAN_URL      = '<?php echo esc_url(rest_url('eventpass/v1/scan')); ?>';
+const ORG_REST_NONCE         = '<?php echo esc_js(wp_create_nonce('wp_rest')); ?>';
 
 let curOrgEventId = 0;
 let orgRosterList = [];
@@ -1293,7 +1304,9 @@ function loadOrganiserRoster(eventId) {
     tbody.innerHTML = '<tr><td colspan="5" style="padding: 2rem; text-align: center; color: var(--ep-slate-500);">Fetching live attendees...</td></tr>';
     stats.textContent = 'Fetching...';
 
-    fetch(ORG_REST_ATTENDEES_URL + '?event_id=' + encodeURIComponent(eventId))
+    fetch(ORG_REST_ATTENDEES_URL + '?event_id=' + encodeURIComponent(eventId), {
+        headers: { 'X-WP-Nonce': ORG_REST_NONCE }
+    })
         .then(r => r.json())
         .then(data => {
             orgRosterList = (data && data.attendees) ? data.attendees : [];
@@ -1360,7 +1373,7 @@ function checkInOrganiserAttendee(token) {
 
     fetch(ORG_REST_SCAN_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': ORG_REST_NONCE },
         body: JSON.stringify({ code: token, event_id: curOrgEventId })
     })
     .then(r => r.json())
@@ -1380,6 +1393,38 @@ function checkInOrganiserAttendee(token) {
 function orgEscape(s) {
     if (!s) return '';
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function downloadOrganiserRosterCSV() {
+    if (!orgRosterList || orgRosterList.length === 0) {
+        alert('No attendee records available to export.');
+        return;
+    }
+    const headers = ['Attendee Name', 'Email', 'Phone', 'Tier', 'Ticket Token', 'Status', 'Checked In At', 'Issued At'];
+    const csvEscape = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const rows = orgRosterList.map(item => {
+        const isChecked = (item.status === 'already_used' || item.status === 'used' || item.status === 'scanned' || item.scanned_at);
+        return [
+            item.holder || '',
+            item.email || '',
+            item.phone || '',
+            item.tier || '',
+            item.token || '',
+            isChecked ? 'Checked In' : (item.status || 'Valid'),
+            item.scanned_at || '',
+            item.issued_at || ''
+        ].map(csvEscape).join(',');
+    });
+    const csv = [headers.map(csvEscape).join(','), ...rows].join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'event-' + curOrgEventId + '-attendees.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 </script>
 

@@ -33,6 +33,45 @@ if ( isset($_GET['ep_resend_verify']) && check_admin_referer('ep_resend_action',
 
 $is_email_verified = get_user_meta( $user_id, '_ep_email_verified', true ) === '1';
 
+// Handle Customer Account Details Update (SOW 4.2)
+$profile_msg = '';
+$profile_err = '';
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_cust_profile_action']) ) {
+    if ( ! isset($_POST['ep_cust_profile_nonce']) || ! wp_verify_nonce($_POST['ep_cust_profile_nonce'], 'ep_cust_profile_action') ) {
+        $profile_err = 'Security session expired. Please refresh and try again.';
+    } else {
+        $new_name  = sanitize_text_field( trim($_POST['profile_full_name'] ?? '') );
+        $new_phone = sanitize_text_field( trim($_POST['profile_phone'] ?? '') );
+        $new_pass  = $_POST['profile_new_password'] ?? '';
+
+        if ( empty($new_name) ) {
+            $profile_err = 'Full Name cannot be empty.';
+        } elseif ( ! empty($new_pass) && strlen($new_pass) < 8 ) {
+            $profile_err = 'New password must be at least 8 characters long.';
+        } else {
+            $parts = explode(' ', $new_name, 2);
+            $upd = [
+                'ID'           => $user_id,
+                'display_name' => $new_name,
+                'first_name'   => $parts[0] ?? '',
+                'last_name'    => $parts[1] ?? '',
+            ];
+            if ( ! empty($new_pass) ) {
+                $upd['user_pass'] = $new_pass;
+            }
+            $res = wp_update_user($upd);
+            if ( is_wp_error($res) ) {
+                $profile_err = $res->get_error_message();
+            } else {
+                update_user_meta( $user_id, 'phone_number', $new_phone );
+                $full_name    = $new_name;
+                $phone_number = ! empty($new_phone) ? $new_phone : '+264 (Unspecified)';
+                $profile_msg  = 'Your account details have been updated successfully.';
+            }
+        }
+    }
+}
+
 // Calculate user avatar initials
 $words = explode( ' ', trim( $full_name ) );
 $initials = '';
@@ -230,6 +269,7 @@ get_header();
             <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.5rem; padding: 0; margin: 0;">
                 <li><a href="#tickets" style="display: block; padding: 0.6rem 1rem; border-radius: 6px; background: rgba(0,180,216,0.1); color: var(--ep-teal-dark); font-weight: 700;">🎟️ My Digital Tickets (<?php echo count($user_tickets); ?>)</a></li>
                 <li><a href="#receipts" style="display: block; padding: 0.6rem 1rem; border-radius: 6px; color: var(--ep-slate-600); font-weight: 500;">🧾 Order Receipts (<?php echo count($user_orders); ?>)</a></li>
+                <li><a href="#profile" style="display: block; padding: 0.6rem 1rem; border-radius: 6px; color: var(--ep-slate-600); font-weight: 500;">⚙️ Account Details</a></li>
                 <li><a href="<?php echo esc_url(home_url('/explore-events')); ?>" style="display: block; padding: 0.6rem 1rem; border-radius: 6px; color: var(--ep-slate-600); font-weight: 500;">🔍 Discover Events</a></li>
                 <li><a href="<?php echo esc_url(home_url('/contact-us')); ?>" style="display: block; padding: 0.6rem 1rem; border-radius: 6px; color: var(--ep-slate-600); font-weight: 500;">💬 Attendee Support</a></li>
                 <li><a href="<?php echo esc_url( wp_logout_url( home_url('/login?loggedout=1') ) ); ?>" style="display: block; padding: 0.6rem 1rem; border-radius: 6px; color: var(--ep-danger); font-weight: 600;">🚪 Sign Out</a></li>
@@ -409,6 +449,50 @@ get_header();
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- Account Details / Profile Management (SOW 4.2) -->
+            <div id="profile" class="no-print" style="background: #ffffff; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-lg); padding: 1.75rem; box-shadow: var(--ep-shadow-sm); margin-top: 2rem;">
+                <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--ep-navy); margin: 0 0 0.35rem 0;">Account Details &amp; Profile</h3>
+                <p style="font-size: 0.88rem; color: var(--ep-slate-600); margin: 0 0 1.25rem 0;">Update your contact details or change your EventPass password.</p>
+
+                <?php if ( ! empty($profile_msg) ) : ?>
+                    <div style="background: #ECFDF5; border: 1px solid #10B981; color: #065F46; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; font-weight: 600;">
+                        ✅ <?php echo esc_html($profile_msg); ?>
+                    </div>
+                <?php elseif ( ! empty($profile_err) ) : ?>
+                    <div style="background: #FEF2F2; border: 1px solid #FCA5A5; color: #991B1B; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; font-weight: 600;">
+                        ⚠️ <?php echo esc_html($profile_err); ?>
+                    </div>
+                <?php endif; ?>
+
+                <form method="POST" action="#profile">
+                    <?php wp_nonce_field('ep_cust_profile_action', 'ep_cust_profile_nonce'); ?>
+                    <input type="hidden" name="ep_cust_profile_action" value="1">
+                    <div class="ep-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">Full Name *</label>
+                            <input type="text" name="profile_full_name" required value="<?php echo esc_attr($full_name); ?>" style="width: 100%; padding: 0.65rem 0.9rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">Mobile Phone (+264)</label>
+                            <input type="tel" name="profile_phone" value="<?php echo esc_attr($phone_number === '+264 (Unspecified)' ? '' : $phone_number); ?>" placeholder="+264 81 123 4567" style="width: 100%; padding: 0.65rem 0.9rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem;">
+                        </div>
+                    </div>
+                    <div class="ep-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">Email Address (Verified)</label>
+                            <input type="email" value="<?php echo esc_attr($user_email); ?>" disabled style="width: 100%; padding: 0.65rem 0.9rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #F8FAFC; color: #64748B;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">New Password (Optional)</label>
+                            <input type="password" name="profile_new_password" minlength="8" placeholder="Leave blank to keep current" style="width: 100%; padding: 0.65rem 0.9rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem;">
+                        </div>
+                    </div>
+                    <button type="submit" class="ep-btn ep-btn-primary ep-btn-sm">
+                        <span>💾 Save Account Details</span>
+                    </button>
+                </form>
             </div>
         </div>
     </div>

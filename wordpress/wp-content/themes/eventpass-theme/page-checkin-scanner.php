@@ -5,16 +5,45 @@
  * @package EventPass_Namibia
  */
 
+if (!is_user_logged_in()) {
+    wp_redirect(home_url('/login?redirect_to=' . urlencode(home_url('/gate-scanner'))));
+    exit;
+}
+
+$current_user = wp_get_current_user();
+$is_admin     = current_user_can('manage_options');
+$is_organiser = in_array('event_organiser', (array)$current_user->roles) || in_array('ep_organiser', (array)$current_user->roles) || current_user_can('edit_ep_events');
+$org_status   = get_user_meta($current_user->ID, '_ep_organiser_status', true);
+
+if (!$is_admin && (!$is_organiser || in_array($org_status, ['pending', 'rejected', 'suspended'], true))) {
+    wp_die(
+        '<div style="max-width:560px; margin:80px auto; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; text-align:center; padding:40px 30px; background:#fff; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.08); border:1px solid #E2E8F0;">
+            <div style="font-size:2.2rem; margin-bottom:0.75rem;">🔒</div>
+            <h1 style="color:#0B1B3D; font-size:1.6rem; font-weight:800; margin-bottom:0.5rem;">Authorised Gate Staff Only</h1>
+            <p style="color:#64748B; font-size:0.95rem; line-height:1.6; margin-bottom:1.75rem;">
+                The Gate Check-In &amp; QR Scanner portal is strictly restricted to approved event organisers and platform administrators.
+            </p>
+            <a href="' . esc_url(home_url('/customer-dashboard')) . '" style="background:#0B1B3D; color:#fff; padding:10px 22px; border-radius:8px; text-decoration:none; font-weight:700;">Return to My Portal</a>
+        </div>',
+        'Gate Scanner Access Restricted',
+        ['response' => 403]
+    );
+}
+
 get_header();
 
-// Query published events from database for gate assignment
-$scanner_events = get_posts([
+// Query published events from database for gate assignment (filtered by organiser ownership unless Admin)
+$scanner_args = [
     'post_type'      => 'ep_event',
     'post_status'    => 'publish',
     'posts_per_page' => -1,
     'orderby'        => 'title',
     'order'          => 'ASC'
-]);
+];
+if (!$is_admin) {
+    $scanner_args['author'] = $current_user->ID;
+}
+$scanner_events = get_posts($scanner_args);
 ?>
 
 <div class="ep-scanner-wrapper" style="background: var(--ep-navy-deep); min-height: 85vh; padding: 2.5rem 1rem; color: #ffffff;">
@@ -159,6 +188,7 @@ $scanner_events = get_posts([
 const REST_SCAN_URL      = '<?php echo esc_url(rest_url('eventpass/v1/scan')); ?>';
 const REST_STATS_URL     = '<?php echo esc_url(rest_url('eventpass/v1/gate-stats')); ?>';
 const REST_ATTENDEES_URL = '<?php echo esc_url(rest_url('eventpass/v1/event-attendees')); ?>';
+const EP_SCANNER_NONCE = '<?php echo esc_js(wp_create_nonce('wp_rest')); ?>';
 
 let html5QrCodeScanner = null;
 let isScannerActive = false;
@@ -168,7 +198,9 @@ let rosterData = [];
 function refreshGateStats() {
     const sel = document.getElementById('scannerEventSelect');
     const eventId = sel ? sel.value : 0;
-    fetch(REST_STATS_URL + '?event_id=' + encodeURIComponent(eventId))
+    fetch(REST_STATS_URL + '?event_id=' + encodeURIComponent(eventId), {
+        headers: { 'X-WP-Nonce': EP_SCANNER_NONCE }
+    })
         .then(r => r.json())
         .then(data => {
             if (data) {
@@ -192,7 +224,9 @@ function loadAttendeeRoster() {
     }
     tbody.innerHTML = '<tr><td colspan="5" style="padding: 1.5rem; text-align: center; color: #94A3B8;">Fetching live attendee roster...</td></tr>';
     
-    fetch(REST_ATTENDEES_URL + '?event_id=' + encodeURIComponent(eventId))
+    fetch(REST_ATTENDEES_URL + '?event_id=' + encodeURIComponent(eventId), {
+        headers: { 'X-WP-Nonce': EP_SCANNER_NONCE }
+    })
         .then(r => r.json())
         .then(data => {
             rosterData = (data && data.attendees) ? data.attendees : [];
@@ -380,7 +414,7 @@ function verifyTicketCode(code) {
 
     fetch(REST_SCAN_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': EP_SCANNER_NONCE },
         body: JSON.stringify({ code: code, event_id: parseInt(eventId) })
     })
     .then(res => res.json())

@@ -53,8 +53,16 @@
             </div>
             <div class="ep-top-right" style="display: flex; gap: 1.25rem;">
                 <a href="<?php echo esc_url(home_url('/faqs')); ?>" style="color: #94A3B8;">Help & FAQs</a>
-                <a href="<?php echo esc_url(home_url('/gate-scanner')); ?>" style="color: var(--ep-teal);">Gate Check-In Portal</a>
-                <a href="<?php echo esc_url(home_url('/admin-dashboard')); ?>" style="color: #F59E0B;">Platform Admin</a>
+                <?php
+                $hdr_is_admin = is_user_logged_in() && current_user_can('manage_options');
+                $hdr_user     = is_user_logged_in() ? wp_get_current_user() : null;
+                $hdr_is_org   = $hdr_user && (in_array('ep_organiser', (array)$hdr_user->roles, true) || in_array('event_organiser', (array)$hdr_user->roles, true) || current_user_can('edit_ep_events'));
+                if ($hdr_is_admin || $hdr_is_org) : ?>
+                    <a href="<?php echo esc_url(home_url('/gate-scanner')); ?>" style="color: var(--ep-teal);">Gate Check-In Portal</a>
+                <?php endif; ?>
+                <?php if ($hdr_is_admin) : ?>
+                    <a href="<?php echo esc_url(home_url('/admin-dashboard')); ?>" style="color: #F59E0B;">Platform Admin</a>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -106,9 +114,11 @@
                         <span>Sign In</span>
                     </a>
                 <?php endif; ?>
+                <?php if (!is_user_logged_in() || $hdr_is_admin || $hdr_is_org) : ?>
                 <a href="<?php echo esc_url(home_url('/organiser-dashboard')); ?>" class="ep-btn ep-btn-primary ep-btn-sm">
                     <span>Organiser Hub</span>
                 </a>
+                <?php endif; ?>
             </div>
 
             <!-- Mobile Hamburger Toggle Button (Shown on mobile/tablet) -->
@@ -155,9 +165,11 @@
                             👤 Sign In / Register
                         </a>
                     <?php endif; ?>
+                    <?php if (!is_user_logged_in() || $hdr_is_admin || $hdr_is_org) : ?>
                     <a href="<?php echo esc_url(home_url('/organiser-dashboard')); ?>" class="ep-btn ep-btn-primary ep-btn-md" style="width: 100%; justify-content: center;">
                         💼 Organiser Hub
                     </a>
+                    <?php endif; ?>
                 </div>
 
                 <div class="ep-mobile-drawer-footer">

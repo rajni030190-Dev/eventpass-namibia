@@ -9,26 +9,56 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * RBAC permission callback for Gate Scanner & Attendee Roster endpoints (SOW Section 9).
+ */
+function eventpass_scanner_permission_check(WP_REST_Request $request) {
+    if (!is_user_logged_in()) {
+        return new WP_Error('rest_forbidden', __('Authentication required for Gate Scanner access.', 'eventpass-core'), ['status' => 401]);
+    }
+    if (current_user_can('manage_options')) {
+        return true;
+    }
+    $user = wp_get_current_user();
+    $is_organiser = in_array('event_organiser', (array)$user->roles, true)
+        || in_array('ep_organiser', (array)$user->roles, true)
+        || current_user_can('edit_ep_events');
+    $org_status = get_user_meta($user->ID, '_ep_organiser_status', true);
+
+    if (!$is_organiser || in_array($org_status, ['pending', 'rejected', 'suspended'], true)) {
+        return new WP_Error('rest_forbidden', __('Approved Organiser or Admin permissions required.', 'eventpass-core'), ['status' => 403]);
+    }
+
+    $event_id = intval($request->get_param('event_id'));
+    if ($event_id > 0) {
+        $author_id = intval(get_post_field('post_author', $event_id));
+        if ($author_id !== $user->ID) {
+            return new WP_Error('rest_forbidden', __('You can only manage gate check-in for your own events.', 'eventpass-core'), ['status' => 403]);
+        }
+    }
+    return true;
+}
+
 add_action('rest_api_init', function () {
     // Verification Endpoint
     register_rest_route('eventpass/v1', '/scan', [
         'methods'             => ['POST', 'GET'],
         'callback'            => 'eventpass_rest_handle_scan',
-        'permission_callback' => '__return_true',
+        'permission_callback' => 'eventpass_scanner_permission_check',
     ]);
 
     // Live Event Gate Statistics Endpoint
     register_rest_route('eventpass/v1', '/gate-stats', [
         'methods'             => ['GET', 'POST'],
         'callback'            => 'eventpass_rest_handle_gate_stats',
-        'permission_callback' => '__return_true',
+        'permission_callback' => 'eventpass_scanner_permission_check',
     ]);
 
     // Live Event Attendee Roster Endpoint (Sprint 3)
     register_rest_route('eventpass/v1', '/event-attendees', [
         'methods'             => ['GET'],
         'callback'            => 'eventpass_rest_handle_event_attendees',
-        'permission_callback' => '__return_true',
+        'permission_callback' => 'eventpass_scanner_permission_check',
     ]);
 });
 
@@ -271,13 +301,11 @@ function eventpass_get_gate_attendance_stats($event_id = 0) {
     ];
 }
 
-// AJAX Fallback Hooks
+// Authenticated AJAX Fallback Hook
 add_action('wp_ajax_eventpass_scan_ticket', function () {
-    $code     = sanitize_text_field($_REQUEST['code'] ?? '');
-    $event_id = intval($_REQUEST['event_id'] ?? 0);
-    wp_send_json(eventpass_validate_ticket_scan($code, $event_id));
-});
-add_action('wp_ajax_nopriv_eventpass_scan_ticket', function () {
+    if (!current_user_can('manage_options') && !current_user_can('edit_ep_events')) {
+        wp_send_json_error(['message' => 'Unauthorized'], 403);
+    }
     $code     = sanitize_text_field($_REQUEST['code'] ?? '');
     $event_id = intval($_REQUEST['event_id'] ?? 0);
     wp_send_json(eventpass_validate_ticket_scan($code, $event_id));

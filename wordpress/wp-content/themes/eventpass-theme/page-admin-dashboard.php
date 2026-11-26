@@ -244,6 +244,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_admin_nonce'])) {
                 $action_type = 'success';
             }
         }
+
+        // H. Update Platform Commission Rate (SOW Section 10)
+        elseif ($admin_action === 'update_commission_rate') {
+            $new_rate = floatval($_POST['default_commission_rate'] ?? 7.5);
+            if ($new_rate < 0 || $new_rate > 50) {
+                $action_msg  = 'Commission rate must be between 0% and 50%.';
+                $action_type = 'error';
+            } else {
+                update_option('ep_default_commission_rate', round($new_rate, 2));
+                $action_msg  = sprintf('Platform commission rate updated to %.2f%%.', $new_rate);
+                $action_type = 'success';
+            }
+        }
+
+        // I. Suspend or Reactivate Organiser Account (SOW Section 4.3 & 10)
+        elseif ($admin_action === 'toggle_organiser_status') {
+            $target_uid = intval($_POST['organiser_user_id'] ?? 0);
+            $new_status = sanitize_key($_POST['new_org_status'] ?? 'suspended');
+            if ($target_uid > 0 && in_array($new_status, ['approved', 'suspended'], true)) {
+                update_user_meta($target_uid, '_ep_organiser_status', $new_status);
+                $u_obj = get_userdata($target_uid);
+                $u_label = $u_obj ? ($u_obj->display_name ?: $u_obj->user_login) : ('User #' . $target_uid);
+                $action_msg  = ($new_status === 'suspended')
+                    ? "Organiser account \"{$u_label}\" has been suspended."
+                    : "Organiser account \"{$u_label}\" has been reactivated.";
+                $action_type = ($new_status === 'suspended') ? 'warning' : 'success';
+            }
+        }
+
+        // J. Refund / Void Order & Invalidate Tickets (SOW Section 10)
+        elseif ($admin_action === 'refund_order') {
+            $order_id = intval($_POST['order_id'] ?? 0);
+            if ($order_id > 0 && get_post_type($order_id) === 'ep_order') {
+                update_post_meta($order_id, '_ep_order_payment_status', 'refunded');
+                update_post_meta($order_id, '_ep_order_refunded_at', current_time('mysql'));
+
+                // Void all issued passes for this order so gate scanner rejects them
+                $order_tickets = get_posts([
+                    'post_type'      => 'ep_ticket',
+                    'post_status'    => 'publish',
+                    'posts_per_page' => -1,
+                    'meta_query'     => [
+                        'relation' => 'OR',
+                        ['key' => '_ep_ticket_order_id', 'value' => $order_id],
+                        ['key' => '_ep_order_id', 'value' => $order_id],
+                    ],
+                ]);
+                foreach ($order_tickets as $tk) {
+                    update_post_meta($tk->ID, '_ep_ticket_status', 'refunded');
+                    update_post_meta($tk->ID, '_ep_status', 'refunded');
+                }
+                $ord_num = get_post_meta($order_id, '_ep_order_number', true) ?: ('ORD-' . $order_id);
+                $action_msg  = sprintf('Order %s marked as Refunded and %d associated digital pass(es) invalidated.', $ord_num, count($order_tickets));
+                $action_type = 'warning';
+            }
+        }
     }
 }
 
@@ -754,14 +810,17 @@ get_header();
 
         <!-- 4. Recent Platform Orders & Transactions -->
         <div style="background: #fff; border: 1px solid var(--ep-slate-200); border-radius: 16px; overflow: hidden; box-shadow: var(--ep-shadow-sm);">
-            <div style="padding: 1.5rem 2rem; background: var(--ep-navy); color: #fff; display: flex; justify-content: space-between; align-items: center;">
+            <div style="padding: 1.5rem 2rem; background: var(--ep-navy); color: #fff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                 <div>
                     <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0 0 0.25rem 0;">Real-Time Financial Transactions</h2>
                     <p style="color: #94A3B8; font-size: 0.88rem; margin: 0;">Audited customer bookings settled across Namibian payment rails.</p>
                 </div>
-                <a href="<?php echo esc_url(admin_url('admin-post.php?action=ep_export_sales_csv&nonce=' . wp_create_nonce('ep_export_sales'))); ?>" class="ep-btn ep-btn-sm" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2);">
-                    📥 Download CSV Audit
-                </a>
+                <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                    <input type="text" id="adminOrderSearch" onkeyup="filterAdminOrders()" placeholder="Search ref, customer, event..." style="padding: 0.45rem 0.85rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #fff; font-size: 0.84rem; min-width: 210px;">
+                    <a href="<?php echo esc_url(admin_url('admin-post.php?action=ep_export_sales_csv&nonce=' . wp_create_nonce('ep_export_sales'))); ?>" class="ep-btn ep-btn-sm" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2);">
+                        📥 Download CSV Audit
+                    </a>
+                </div>
             </div>
 
             <div style="padding: 1.5rem 2rem;">
@@ -769,15 +828,16 @@ get_header();
                     <p style="color: #64748B; text-align: center; padding: 2rem;">No orders recorded yet.</p>
                 <?php else : ?>
                     <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.92rem; text-align: left;">
+                        <table id="adminOrdersTable" style="width: 100%; border-collapse: collapse; font-size: 0.92rem; text-align: left;">
                             <thead>
                                 <tr style="border-bottom: 2px solid var(--ep-slate-200); color: #64748B; font-size: 0.8rem; text-transform: uppercase;">
                                     <th style="padding: 0.75rem 1rem;">Order Reference</th>
                                     <th style="padding: 0.75rem 1rem;">Customer</th>
                                     <th style="padding: 0.75rem 1rem;">Event</th>
                                     <th style="padding: 0.75rem 1rem;">Total Paid</th>
-                                    <th style="padding: 0.75rem 1rem;">Commission (7.5%)</th>
+                                    <th style="padding: 0.75rem 1rem;">Commission</th>
                                     <th style="padding: 0.75rem 1rem;">Gateway Status</th>
+                                    <th style="padding: 0.75rem 1rem; text-align: right;">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -788,12 +848,13 @@ get_header();
                                     $ev_id   = get_post_meta($ord->ID, '_ep_order_event_id', true);
                                     $ev_name = get_the_title($ev_id) ?: 'Premier Event';
                                     $o_tot   = floatval(get_post_meta($ord->ID, '_ep_order_total', true));
+                                    $o_stat  = get_post_meta($ord->ID, '_ep_order_payment_status', true) ?: 'completed';
                                     $o_com   = floatval(get_post_meta($ord->ID, '_ep_order_commission_amount', true) ?: get_post_meta($ord->ID, '_ep_order_commission', true));
                                     if ($o_com <= 0 && $o_tot > 0) {
-                                        $o_com = round($o_tot * 0.075, 2);
+                                        $o_com = round($o_tot * (floatval(get_option('ep_default_commission_rate', 7.5)) / 100), 2);
                                     }
                                 ?>
-                                    <tr style="border-bottom: 1px solid var(--ep-slate-200);">
+                                    <tr class="admin-order-row" style="border-bottom: 1px solid var(--ep-slate-200);">
                                         <td style="padding: 1rem;">
                                             <code style="font-weight: 800; color: #00B4D8;"><?php echo esc_html($o_num); ?></code>
                                             <div style="font-size: 0.8rem; color: #64748B;"><?php echo esc_html(get_the_date('j M Y, H:i', $ord->ID)); ?></div>
@@ -812,9 +873,35 @@ get_header();
                                             +N$ <?php echo number_format($o_com, 2); ?>
                                         </td>
                                         <td style="padding: 1rem;">
-                                            <span style="background: rgba(16,185,129,0.1); color: #065F46; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">
-                                                ✓ Settled (Finatic)
-                                            </span>
+                                            <?php if ($o_stat === 'refunded') : ?>
+                                                <span style="background: #FEF2F2; color: #991B1B; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">
+                                                    ✕ Refunded
+                                                </span>
+                                            <?php else : ?>
+                                                <span style="background: rgba(16,185,129,0.1); color: #065F46; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">
+                                                    ✓ Settled (Finatic)
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td style="padding: 1rem; text-align: right;">
+                                            <?php if ($o_stat !== 'refunded') : ?>
+                                                <form method="POST" action="" style="display: inline-block;">
+                                                    <?php wp_nonce_field('ep_admin_action', 'ep_admin_nonce'); ?>
+                                                    <input type="hidden" name="ep_admin_action" value="refund_order">
+                                                    <input type="hidden" name="order_id" value="<?php echo esc_attr($ord->ID); ?>">
+                                                    <button type="button" class="ep-btn ep-btn-sm" style="background: #FEE2E2; color: #DC2626; font-weight: 700; font-size: 0.78rem;" onclick="openAdminConfirmModal(this.form, {
+                                                        title: 'Confirm Refund &amp; Pass Voiding',
+                                                        message: 'Mark order <strong><?php echo esc_js($o_num); ?></strong> (N$ <?php echo number_format($o_tot, 2); ?>) as <strong>Refunded</strong> and void its digital QR passes?',
+                                                        confirmText: '✕ Void &amp; Refund',
+                                                        theme: 'danger',
+                                                        icon: '↩️'
+                                                    });">
+                                                        Refund
+                                                    </button>
+                                                </form>
+                                            <?php else : ?>
+                                                <span style="font-size: 0.78rem; color: #94A3B8;">Voided</span>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -824,6 +911,95 @@ get_header();
                 <?php endif; ?>
             </div>
         </div>
+
+        <!-- 5. Platform Commission Configuration & Registered Organiser Control (SOW Section 10) -->
+        <div class="ep-form-grid-2" style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 2rem; align-items: start;">
+            <!-- Commission Rate Card -->
+            <div style="background: #fff; border: 1px solid var(--ep-slate-200); border-radius: 16px; overflow: hidden; box-shadow: var(--ep-shadow-sm);">
+                <div style="padding: 1.25rem 1.75rem; background: var(--ep-navy); color: #fff;">
+                    <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0 0 0.2rem 0;">Commission Configuration</h2>
+                    <p style="color: #94A3B8; font-size: 0.82rem; margin: 0;">Configure default platform fee percentage (SOW Section 10).</p>
+                </div>
+                <div style="padding: 1.5rem 1.75rem;">
+                    <?php $curr_comm_rate = floatval(get_option('ep_default_commission_rate', 7.5)); ?>
+                    <form method="POST" action="">
+                        <?php wp_nonce_field('ep_admin_action', 'ep_admin_nonce'); ?>
+                        <input type="hidden" name="ep_admin_action" value="update_commission_rate">
+                        <label style="display: block; font-size: 0.84rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.4rem;">Default Platform Commission (%)</label>
+                        <div style="display: flex; gap: 0.75rem; align-items: center;">
+                            <input type="number" step="0.1" min="0" max="50" name="default_commission_rate" value="<?php echo esc_attr($curr_comm_rate); ?>" required style="flex: 1; padding: 0.65rem 0.9rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 1rem; font-weight: 700;">
+                            <button type="submit" class="ep-btn ep-btn-primary ep-btn-sm">Update Rate</button>
+                        </div>
+                        <small style="display: block; margin-top: 0.6rem; color: #64748B; font-size: 0.78rem;">Applied automatically to all new ticket orders and organiser payout ledgers.</small>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Registered Organisers Management -->
+            <div style="background: #fff; border: 1px solid var(--ep-slate-200); border-radius: 16px; overflow: hidden; box-shadow: var(--ep-shadow-sm);">
+                <div style="padding: 1.25rem 1.75rem; background: var(--ep-navy); color: #fff; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0 0 0.2rem 0;">Registered Organisers</h2>
+                        <p style="color: #94A3B8; font-size: 0.82rem; margin: 0;">Suspend or reactivate accredited promoter accounts.</p>
+                    </div>
+                </div>
+                <div style="padding: 1.25rem 1.75rem; max-height: 280px; overflow-y: auto;">
+                    <?php
+                    $reg_organisers = get_users(['role__in' => ['event_organiser', 'ep_organiser'], 'number' => 50]);
+                    if (empty($reg_organisers)) : ?>
+                        <p style="color: #64748B; text-align: center; margin: 1rem 0;">No registered organisers yet.</p>
+                    <?php else : ?>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem; text-align: left;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--ep-slate-200); color: #64748B; font-size: 0.75rem; text-transform: uppercase;">
+                                    <th style="padding: 0.5rem;">Organiser</th>
+                                    <th style="padding: 0.5rem;">Status</th>
+                                    <th style="padding: 0.5rem; text-align: right;">Access</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($reg_organisers as $ro) :
+                                    $ro_st = get_user_meta($ro->ID, '_ep_organiser_status', true) ?: 'approved';
+                                    $is_susp = ($ro_st === 'suspended');
+                                ?>
+                                    <tr style="border-bottom: 1px solid var(--ep-slate-100);">
+                                        <td style="padding: 0.65rem 0.5rem;">
+                                            <strong style="color: var(--ep-navy);"><?php echo esc_html($ro->display_name ?: $ro->user_login); ?></strong>
+                                            <div style="font-size: 0.76rem; color: #64748B;"><?php echo esc_html($ro->user_email); ?></div>
+                                        </td>
+                                        <td style="padding: 0.65rem 0.5rem;">
+                                            <span style="padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; background: <?php echo $is_susp ? '#FEF2F2' : '#ECFDF5'; ?>; color: <?php echo $is_susp ? '#991B1B' : '#065F46'; ?>;">
+                                                <?php echo $is_susp ? 'Suspended' : 'Active'; ?>
+                                            </span>
+                                        </td>
+                                        <td style="padding: 0.65rem 0.5rem; text-align: right;">
+                                            <form method="POST" action="" style="display: inline;">
+                                                <?php wp_nonce_field('ep_admin_action', 'ep_admin_nonce'); ?>
+                                                <input type="hidden" name="ep_admin_action" value="toggle_organiser_status">
+                                                <input type="hidden" name="organiser_user_id" value="<?php echo esc_attr($ro->ID); ?>">
+                                                <input type="hidden" name="new_org_status" value="<?php echo $is_susp ? 'approved' : 'suspended'; ?>">
+                                                <button type="submit" class="ep-btn ep-btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.65rem; background: <?php echo $is_susp ? '#10B981' : '#FEE2E2'; ?>; color: <?php echo $is_susp ? '#fff' : '#DC2626'; ?>;">
+                                                    <?php echo $is_susp ? 'Reactivate' : 'Suspend'; ?>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        function filterAdminOrders() {
+            const q = (document.getElementById('adminOrderSearch').value || '').toLowerCase().trim();
+            document.querySelectorAll('#adminOrdersTable .admin-order-row').forEach(row => {
+                row.style.display = (!q || row.textContent.toLowerCase().includes(q)) ? '' : 'none';
+            });
+        }
+        </script>
 
     </div>
 
