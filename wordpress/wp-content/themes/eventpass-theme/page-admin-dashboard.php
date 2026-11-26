@@ -835,21 +835,21 @@ get_header();
                 </div>
             </div>
 
-            <div style="padding: 1.5rem 2rem;">
+            <div style="padding: 1.25rem 1.5rem;">
                 <?php if (empty($recent_orders)) : ?>
                     <p style="color: #64748B; text-align: center; padding: 2rem;">No orders recorded yet.</p>
                 <?php else : ?>
                     <div style="overflow-x: auto;">
-                        <table id="adminOrdersTable" style="width: 100%; border-collapse: collapse; font-size: 0.92rem; text-align: left;">
+                        <table id="adminOrdersTable" style="width: 100%; border-collapse: collapse; font-size: 0.88rem; text-align: left;">
                             <thead>
-                                <tr style="border-bottom: 2px solid var(--ep-slate-200); color: #64748B; font-size: 0.8rem; text-transform: uppercase;">
-                                    <th style="padding: 0.75rem 1rem;">Order Reference</th>
-                                    <th style="padding: 0.75rem 1rem;">Customer</th>
-                                    <th style="padding: 0.75rem 1rem;">Event</th>
-                                    <th style="padding: 0.75rem 1rem;">Total Paid</th>
-                                    <th style="padding: 0.75rem 1rem;">Commission</th>
-                                    <th style="padding: 0.75rem 1rem;">Gateway Status</th>
-                                    <th style="padding: 0.75rem 1rem; text-align: right;">Action</th>
+                                <tr style="border-bottom: 2px solid var(--ep-slate-200); color: #64748B; font-size: 0.76rem; text-transform: uppercase;">
+                                    <th style="padding: 0.65rem 0.6rem;">Order Ref</th>
+                                    <th style="padding: 0.65rem 0.6rem;">Customer</th>
+                                    <th style="padding: 0.65rem 0.6rem;">Event</th>
+                                    <th style="padding: 0.65rem 0.6rem;">Total Paid</th>
+                                    <th style="padding: 0.65rem 0.6rem;">Commission</th>
+                                    <th style="padding: 0.65rem 0.6rem;">Status</th>
+                                    <th style="padding: 0.65rem 0.6rem; text-align: right;">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -867,35 +867,35 @@ get_header();
                                     }
                                 ?>
                                     <tr class="admin-order-row" style="border-bottom: 1px solid var(--ep-slate-200);">
-                                        <td style="padding: 1rem;">
+                                        <td style="padding: 0.75rem 0.6rem; white-space: nowrap;">
                                             <code style="font-weight: 800; color: #00B4D8;"><?php echo esc_html($o_num); ?></code>
-                                            <div style="font-size: 0.8rem; color: #64748B;"><?php echo esc_html(get_the_date('j M Y, H:i', $ord->ID)); ?></div>
+                                            <div style="font-size: 0.76rem; color: #64748B;"><?php echo esc_html(get_the_date('j M Y, H:i', $ord->ID)); ?></div>
                                         </td>
-                                        <td style="padding: 1rem;">
+                                        <td style="padding: 0.75rem 0.6rem; max-width: 210px; word-break: break-word;">
                                             <strong><?php echo esc_html($c_name); ?></strong>
-                                            <div style="font-size: 0.8rem; color: #64748B;"><?php echo esc_html($c_mail); ?></div>
+                                            <div style="font-size: 0.76rem; color: #64748B;"><?php echo esc_html($c_mail); ?></div>
                                         </td>
-                                        <td style="padding: 1rem;">
+                                        <td style="padding: 0.75rem 0.6rem; max-width: 220px;">
                                             <strong style="color: var(--ep-navy);"><?php echo esc_html($ev_name); ?></strong>
                                         </td>
-                                        <td style="padding: 1rem;">
+                                        <td style="padding: 0.75rem 0.6rem; white-space: nowrap;">
                                             <strong>N$ <?php echo number_format($o_tot, 2); ?></strong>
                                         </td>
-                                        <td style="padding: 1rem; color: #047857; font-weight: 700;">
+                                        <td style="padding: 0.75rem 0.6rem; color: #047857; font-weight: 700; white-space: nowrap;">
                                             +N$ <?php echo number_format($o_com, 2); ?>
                                         </td>
-                                        <td style="padding: 1rem;">
+                                        <td style="padding: 0.75rem 0.6rem; white-space: nowrap;">
                                             <?php if ($o_stat === 'refunded') : ?>
-                                                <span style="background: #FEF2F2; color: #991B1B; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">
+                                                <span style="background: #FEF2F2; color: #991B1B; padding: 3px 8px; border-radius: 6px; font-size: 0.76rem; font-weight: 800;">
                                                     ✕ Refunded
                                                 </span>
                                             <?php else : ?>
-                                                <span style="background: rgba(16,185,129,0.1); color: #065F46; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;">
-                                                    ✓ Settled (Finatic)
+                                                <span style="background: rgba(16,185,129,0.1); color: #065F46; padding: 3px 8px; border-radius: 6px; font-size: 0.76rem; font-weight: 800;">
+                                                    ✓ Settled
                                                 </span>
                                             <?php endif; ?>
                                         </td>
-                                        <td style="padding: 1rem; text-align: right;">
+                                        <td style="padding: 0.75rem 0.6rem; text-align: right; white-space: nowrap;">
                                             <?php if ($o_stat !== 'refunded') : ?>
                                                 <form method="POST" action="" style="display: inline-block;">
                                                     <?php wp_nonce_field('ep_admin_action', 'ep_admin_nonce'); ?>
@@ -955,18 +955,18 @@ get_header();
                         <p style="color: #94A3B8; font-size: 0.82rem; margin: 0;">Suspend or reactivate accredited promoter accounts.</p>
                     </div>
                 </div>
-                <div style="padding: 1.25rem 1.75rem; max-height: 280px; overflow-y: auto;">
+                <div style="padding: 1rem 1.25rem; max-height: 280px; overflow: auto;">
                     <?php
                     $reg_organisers = get_users(['role__in' => ['event_organiser', 'ep_organiser'], 'number' => 50]);
                     if (empty($reg_organisers)) : ?>
                         <p style="color: #64748B; text-align: center; margin: 1rem 0;">No registered organisers yet.</p>
                     <?php else : ?>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem; text-align: left;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.84rem; text-align: left;">
                             <thead>
-                                <tr style="border-bottom: 1px solid var(--ep-slate-200); color: #64748B; font-size: 0.75rem; text-transform: uppercase;">
-                                    <th style="padding: 0.5rem;">Organiser</th>
-                                    <th style="padding: 0.5rem;">Status</th>
-                                    <th style="padding: 0.5rem; text-align: right;">Access</th>
+                                <tr style="border-bottom: 1px solid var(--ep-slate-200); color: #64748B; font-size: 0.74rem; text-transform: uppercase;">
+                                    <th style="padding: 0.45rem;">Organiser</th>
+                                    <th style="padding: 0.45rem;">Status</th>
+                                    <th style="padding: 0.45rem; text-align: right;">Access</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -975,16 +975,16 @@ get_header();
                                     $is_susp = ($ro_st === 'suspended');
                                 ?>
                                     <tr style="border-bottom: 1px solid var(--ep-slate-100);">
-                                        <td style="padding: 0.65rem 0.5rem;">
+                                        <td style="padding: 0.55rem 0.45rem; max-width: 220px; word-break: break-word;">
                                             <strong style="color: var(--ep-navy);"><?php echo esc_html($ro->display_name ?: $ro->user_login); ?></strong>
-                                            <div style="font-size: 0.76rem; color: #64748B;"><?php echo esc_html($ro->user_email); ?></div>
+                                            <div style="font-size: 0.74rem; color: #64748B;"><?php echo esc_html($ro->user_email); ?></div>
                                         </td>
-                                        <td style="padding: 0.65rem 0.5rem;">
+                                        <td style="padding: 0.55rem 0.45rem; white-space: nowrap;">
                                             <span style="padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; background: <?php echo $is_susp ? '#FEF2F2' : '#ECFDF5'; ?>; color: <?php echo $is_susp ? '#991B1B' : '#065F46'; ?>;">
                                                 <?php echo $is_susp ? 'Suspended' : 'Active'; ?>
                                             </span>
                                         </td>
-                                        <td style="padding: 0.65rem 0.5rem; text-align: right;">
+                                        <td style="padding: 0.55rem 0.45rem; text-align: right; white-space: nowrap;">
                                             <form method="POST" action="" style="display: inline;">
                                                 <?php wp_nonce_field('ep_admin_action', 'ep_admin_nonce'); ?>
                                                 <input type="hidden" name="ep_admin_action" value="toggle_organiser_status">
