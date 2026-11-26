@@ -63,8 +63,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_checkout_auth_regi
         $reg_phone = sanitize_text_field($_POST['reg_phone'] ?? '');
         $reg_pass  = $_POST['reg_password'] ?? '';
 
+        // Phone validation
+        $reg_phone_digits = preg_replace('/[^0-9]/', '', $reg_phone);
+
         if (empty($reg_name) || empty($reg_email) || empty($reg_pass)) {
             $auth_error = __('Please complete all required registration fields.', 'eventpass-core');
+        } elseif (!empty($reg_phone) && (strlen($reg_phone_digits) < 9 || strlen($reg_phone_digits) > 15 || !preg_match('/^\+?[0-9\s\-]{9,20}$/', $reg_phone))) {
+            $auth_error = __('Please enter a valid phone number (e.g. +264 81 123 4567).', 'eventpass-core');
         } elseif (!is_email($reg_email)) {
             $auth_error = __('Please enter a valid email address.', 'eventpass-core');
         } elseif (email_exists($reg_email)) {
@@ -129,6 +134,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_checkout_action'])
         $payment_method = sanitize_key($_POST['payment_method'] ?? 'finatic');
         $raw_tickets    = $_POST['tickets'] ?? [];
 
+        // Phone validation
+        $cust_phone_digits = preg_replace('/[^0-9]/', '', $customer_phone);
+
         $items = [];
         if (is_array($raw_tickets)) {
             foreach ($raw_tickets as $tid => $qty) {
@@ -139,7 +147,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_checkout_action'])
             }
         }
 
-        if (empty($items)) {
+        if (!empty($customer_phone) && (strlen($cust_phone_digits) < 9 || strlen($cust_phone_digits) > 15 || !preg_match('/^\+?[0-9\s\-]{9,20}$/', $customer_phone))) {
+            $checkout_error = __('Please enter a valid phone number (e.g. +264 81 123 4567).', 'eventpass-core');
+        } elseif (empty($items)) {
             $checkout_error = __('Please select at least one ticket to purchase.', 'eventpass-core');
         } else {
             // Check if user should be registered or linked to existing account
@@ -1068,7 +1078,7 @@ if ($event && $event->post_type === 'ep_event') {
                                         <input type="email" name="reg_email" required placeholder="Email Address" style="padding: 0.6rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.85rem; width: 100%;">
                                     </div>
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
-                                        <input type="tel" name="reg_phone" required placeholder="Mobile Phone (+264)" style="padding: 0.6rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.85rem; width: 100%;">
+                                        <input type="tel" name="reg_phone" required placeholder="Mobile Phone (+264)" pattern="^\+?[0-9\s\-]{9,20}$" maxlength="20" title="Enter a valid phone number e.g. +264 81 123 4567" style="padding: 0.6rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.85rem; width: 100%;">
                                         <input type="password" name="reg_password" required minlength="8" placeholder="Password (min 8 chars)" style="padding: 0.6rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.85rem; width: 100%;">
                                     </div>
                                     <button type="submit" class="ep-btn ep-btn-primary ep-btn-sm" style="width: 100%; justify-content: center;">
@@ -1123,7 +1133,7 @@ if ($event && $event->post_type === 'ep_event') {
 
                     <div style="margin-bottom: 1.5rem;">
                         <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Mobile Phone (+264) *</label>
-                        <input type="tel" name="customer_phone" required value="<?php echo esc_attr($default_phone); ?>" placeholder="+264 81 123 4567" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
+                        <input type="tel" name="customer_phone" required value="<?php echo esc_attr($default_phone); ?>" placeholder="+264 81 123 4567" pattern="^\+?[0-9\s\-]{9,20}$" maxlength="20" title="Enter a valid phone number e.g. +264 81 123 4567" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">
                         <small style="color: #64748B; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Used for SMS ticket dispatch and gate customer support.</small>
                     </div>
 
