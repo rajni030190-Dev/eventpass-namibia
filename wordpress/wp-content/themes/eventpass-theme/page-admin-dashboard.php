@@ -277,27 +277,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_admin_nonce'])) {
         elseif ($admin_action === 'refund_order') {
             $order_id = intval($_POST['order_id'] ?? 0);
             if ($order_id > 0 && get_post_type($order_id) === 'ep_order') {
-                update_post_meta($order_id, '_ep_order_payment_status', 'refunded');
-                update_post_meta($order_id, '_ep_order_refunded_at', current_time('mysql'));
+                $gw_res = class_exists('EventPass_Finatic_Gateway')
+                    ? EventPass_Finatic_Gateway::process_refund($order_id, null, 'Admin initiated refund')
+                    : new WP_Error('missing_gateway', 'Payment gateway module not loaded.');
 
-                // Void all issued passes for this order so gate scanner rejects them
-                $order_tickets = get_posts([
-                    'post_type'      => 'ep_ticket',
-                    'post_status'    => 'publish',
-                    'posts_per_page' => -1,
-                    'meta_query'     => [
-                        'relation' => 'OR',
-                        ['key' => '_ep_ticket_order_id', 'value' => $order_id],
-                        ['key' => '_ep_order_id', 'value' => $order_id],
-                    ],
-                ]);
-                foreach ($order_tickets as $tk) {
-                    update_post_meta($tk->ID, '_ep_ticket_status', 'refunded');
-                    update_post_meta($tk->ID, '_ep_status', 'refunded');
+                if (is_wp_error($gw_res)) {
+                    $action_msg  = 'Refund failed at payment provider: ' . $gw_res->get_error_message();
+                    $action_type = 'error';
+                } else {
+                    update_post_meta($order_id, '_ep_order_payment_status', 'refunded');
+                    update_post_meta($order_id, '_ep_order_refunded_at', current_time('mysql'));
+
+                    // Void all issued passes for this order so gate scanner rejects them
+                    $order_tickets = get_posts([
+                        'post_type'      => 'ep_ticket',
+                        'post_status'    => 'publish',
+                        'posts_per_page' => -1,
+                        'meta_query'     => [
+                            'relation' => 'OR',
+                            ['key' => '_ep_ticket_order_id', 'value' => $order_id],
+                            ['key' => '_ep_order_id', 'value' => $order_id],
+                        ],
+                    ]);
+                    foreach ($order_tickets as $tk) {
+                        update_post_meta($tk->ID, '_ep_ticket_status', 'refunded');
+                        update_post_meta($tk->ID, '_ep_status', 'refunded');
+                    }
+                    $ord_num = get_post_meta($order_id, '_ep_order_number', true) ?: ('ORD-' . $order_id);
+                    $gw_note = ($gw_res['mode'] === 'live')
+                        ? 'Live Finatic Ref: ' . $gw_res['refund_ref']
+                        : 'Sandbox Ref: ' . $gw_res['refund_ref'] . ' (Test Mode)';
+                    $action_msg  = sprintf('Order %s refunded (%s) and %d digital pass(es) invalidated.', $ord_num, $gw_note, count($order_tickets));
+                    $action_type = 'warning';
                 }
-                $ord_num = get_post_meta($order_id, '_ep_order_number', true) ?: ('ORD-' . $order_id);
-                $action_msg  = sprintf('Order %s marked as Refunded and %d associated digital pass(es) invalidated.', $ord_num, count($order_tickets));
-                $action_type = 'warning';
             }
         }
     }

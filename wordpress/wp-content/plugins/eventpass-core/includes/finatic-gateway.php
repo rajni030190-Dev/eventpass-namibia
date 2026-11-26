@@ -267,6 +267,95 @@ class EventPass_Finatic_Gateway {
         delete_transient($lock_key);
         return ['status' => 400, 'error' => 'Unhandled payment status: ' . $status];
     }
+
+    /**
+     * Process Refund via Finatic Payment Provider API (SOW Section 7 & 10)
+     *
+     * @param int         $order_id
+     * @param float|null  $amount
+     * @param string      $reason
+     * @return array|WP_Error
+     */
+    public static function process_refund($order_id, $amount = null, $reason = 'Admin initiated refund') {
+        $order_id = intval($order_id);
+        $order    = get_post($order_id);
+        if (!$order || $order->post_type !== 'ep_order') {
+            return new WP_Error('invalid_order', __('Order record not found for refund.', 'eventpass-core'));
+        }
+
+        $current_status = get_post_meta($order_id, '_ep_order_payment_status', true);
+        if ($current_status === 'refunded') {
+            return new WP_Error('already_refunded', __('This order has already been refunded.', 'eventpass-core'));
+        }
+
+        $total      = ($amount !== null) ? floatval($amount) : floatval(get_post_meta($order_id, '_ep_order_total', true));
+        $amount_str = number_format($total, 2, '.', '');
+        $txn_id     = get_post_meta($order_id, '_ep_order_txn_id', true) ?: ('TXN-' . $order_id);
+
+        if (self::is_test_mode()) {
+            // Sandbox / Staging simulation: live merchant credentials not provisioned
+            $refund_ref = 'RFN-SANDBOX-' . strtoupper(substr(md5(uniqid((string)$order_id, true)), 0, 8));
+            update_post_meta($order_id, '_ep_order_refund_txn_id', $refund_ref);
+            update_post_meta($order_id, '_ep_order_refund_mode', 'sandbox');
+            return [
+                'success'    => true,
+                'mode'       => 'sandbox',
+                'refund_ref' => $refund_ref,
+                'amount'     => $amount_str,
+                'message'    => 'Processed in Finatic Sandbox Mode (live merchant API keys required for real bank settlement).',
+            ];
+        }
+
+        // Live Production Mode: Dispatch signed refund request to Finatic /refunds API
+        $merchant_id = self::get_merchant_id();
+        $api_key     = self::get_api_key();
+        $secret_key  = self::get_secret_key();
+        $timestamp   = time();
+        $sig_payload = "{$merchant_id}|{$order_id}|{$txn_id}|{$amount_str}|{$timestamp}";
+        $signature   = hash_hmac('sha256', $sig_payload, $secret_key);
+
+        $response = wp_remote_post(self::get_endpoint() . 'refunds', [
+            'timeout' => 20,
+            'headers' => [
+                'Content-Type'  => 'application/json',
+                'Authorization' => 'Bearer ' . $api_key,
+                'X-EP-Signature'=> $signature,
+            ],
+            'body'    => wp_json_encode([
+                'merchant_id'    => $merchant_id,
+                'order_id'       => $order_id,
+                'transaction_id' => $txn_id,
+                'amount'         => $amount_str,
+                'currency'       => 'NAD',
+                'reason'         => sanitize_text_field($reason),
+                'timestamp'      => $timestamp,
+                'signature'      => $signature,
+            ]),
+        ]);
+
+        if (is_wp_error($response)) {
+            return new WP_Error('gateway_unreachable', 'Finatic Refund API error: ' . $response->get_error_message());
+        }
+
+        $code = wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        if ($code < 200 || $code >= 300 || empty($body['success'])) {
+            $err = $body['message'] ?? ('Finatic Refund API returned HTTP ' . $code);
+            return new WP_Error('gateway_refund_declined', $err);
+        }
+
+        $refund_ref = sanitize_text_field($body['refund_id'] ?? ('RFN-LIVE-' . $order_id));
+        update_post_meta($order_id, '_ep_order_refund_txn_id', $refund_ref);
+        update_post_meta($order_id, '_ep_order_refund_mode', 'live');
+
+        return [
+            'success'    => true,
+            'mode'       => 'live',
+            'refund_ref' => $refund_ref,
+            'amount'     => $amount_str,
+            'message'    => 'Refund settled via Finatic Live Gateway.',
+        ];
+    }
 }
 
 /**
