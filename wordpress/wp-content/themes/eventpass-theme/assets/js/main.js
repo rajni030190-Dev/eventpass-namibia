@@ -103,8 +103,8 @@ function initScrollAnimations() {
 
     candidateSet.forEach(el => {
         const rect = el.getBoundingClientRect();
-        // Keep above-the-fold elements immediately visible on initial load
-        if (rect.top < viewportHeight * 0.92) {
+        // Keep above-the-fold & near-fold elements immediately visible on initial load
+        if (rect.top < viewportHeight * 1.05) {
             return;
         }
 
