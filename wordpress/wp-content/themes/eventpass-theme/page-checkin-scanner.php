@@ -213,7 +213,7 @@ function renderRoster(list) {
     }
 
     tbody.innerHTML = list.map(item => {
-        const isCheckedIn = (item.status === 'used' || item.status === 'scanned' || item.scanned_at);
+        const isCheckedIn = (item.status === 'already_used' || item.status === 'used' || item.status === 'scanned' || item.scanned_at);
         const statusBadge = isCheckedIn 
             ? `<span style="background: rgba(16, 185, 129, 0.2); color: #10B981; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">Checked In</span>`
             : `<span style="background: rgba(56, 189, 248, 0.2); color: var(--ep-cyan); padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">Valid</span>`;

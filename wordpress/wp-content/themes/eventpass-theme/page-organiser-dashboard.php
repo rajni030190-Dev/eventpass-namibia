@@ -581,6 +581,7 @@ get_header();
                         <th style="padding: 0.75rem;">Date & Town</th>
                         <th style="padding: 0.75rem;">Status</th>
                         <th style="padding: 0.75rem;">Sold / Cap</th>
+                        <th style="padding: 0.75rem;">Attendance</th>
                         <th style="padding: 0.75rem;">Gross Sales</th>
                         <th style="padding: 0.75rem;">Actions</th>
                     </tr>
@@ -643,6 +644,20 @@ get_header();
                                 </td>
                                 <td style="padding: 1rem 0.75rem; font-weight: 700;">
                                     <?php echo number_format($sold); ?> / <?php echo number_format($cap); ?>
+                                </td>
+                                <td style="padding: 1rem 0.75rem; font-weight: 700;">
+                                    <?php
+                                    $att_stats = function_exists('eventpass_get_gate_attendance_stats') ? eventpass_get_gate_attendance_stats($ev_id) : ['total_sold' => $sold, 'checked_in' => 0];
+                                    $att_in    = intval($att_stats['checked_in'] ?? 0);
+                                    $att_tot   = max(intval($att_stats['total_sold'] ?? 0), $sold);
+                                    $att_pct   = $att_tot > 0 ? round(($att_in / $att_tot) * 100) : 0;
+                                    ?>
+                                    <span style="color: <?php echo $att_in > 0 ? 'var(--ep-success)' : 'var(--ep-slate-600)'; ?>;">
+                                        <?php echo number_format($att_in); ?> / <?php echo number_format($att_tot); ?>
+                                    </span>
+                                    <span style="display: block; font-size: 0.75rem; color: #64748B; font-weight: 600;">
+                                        <?php echo $att_pct; ?>% checked in
+                                    </span>
                                 </td>
                                 <td style="padding: 1rem 0.75rem; font-weight: 700; color: var(--ep-teal-dark);">
                                     N$ <?php echo number_format($gross, 2); ?>
@@ -711,7 +726,7 @@ get_header();
                         <?php endforeach; ?>
                     <?php else : ?>
                         <tr>
-                            <td colspan="7" style="padding: 3rem 1rem; text-align: center; color: var(--ep-slate-500);">
+                            <td colspan="8" style="padding: 3rem 1rem; text-align: center; color: var(--ep-slate-500);">
                                 No events created yet. Click <strong>"+ Create Event"</strong> above to submit your first event listing!
                             </td>
                         </tr>
@@ -1282,7 +1297,7 @@ function loadOrganiserRoster(eventId) {
         .then(r => r.json())
         .then(data => {
             orgRosterList = (data && data.attendees) ? data.attendees : [];
-            let checkedInCount = orgRosterList.filter(a => a.status === 'used' || a.status === 'scanned' || a.scanned_at).length;
+            let checkedInCount = orgRosterList.filter(a => a.status === 'already_used' || a.status === 'used' || a.status === 'scanned' || a.scanned_at).length;
             stats.textContent = `Total: ${orgRosterList.length} • Checked In: ${checkedInCount}`;
             renderOrganiserRoster(orgRosterList);
         })
@@ -1299,7 +1314,7 @@ function renderOrganiserRoster(list) {
     }
 
     tbody.innerHTML = list.map(item => {
-        const isChecked = (item.status === 'used' || item.status === 'scanned' || item.scanned_at);
+        const isChecked = (item.status === 'already_used' || item.status === 'used' || item.status === 'scanned' || item.scanned_at);
         const statusBadge = isChecked
             ? `<span style="background: #ECFDF5; color: #065F46; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 11px;">Checked In</span>`
             : `<span style="background: #EFF6FF; color: #1D4ED8; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 11px;">Valid Pass</span>`;
