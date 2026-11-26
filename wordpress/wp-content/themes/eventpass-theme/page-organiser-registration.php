@@ -86,7 +86,7 @@ get_header();
 
 <!-- Registration Layout -->
 <div class="container" style="padding: 4.5rem 1.5rem 5.5rem;">
-    <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 3.5rem; align-items: flex-start;">
+    <div class="ep-organiser-reg-grid" style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 3.5rem; align-items: flex-start;">
         
         <!-- Left: Promoter Benefits -->
         <div>
@@ -167,7 +167,7 @@ get_header();
                         <input type="text" name="org_name" required placeholder="e.g. Kalahari Arts & Events CC" value="<?php echo esc_attr($_POST['org_name'] ?? ''); ?>" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 0.95rem;">
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                    <div class="ep-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
                         <div>
                             <label style="display: block; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem; font-size: 0.88rem;">Primary Contact Person *</label>
                             <input type="text" name="contact_name" required placeholder="Full Name" value="<?php echo esc_attr($_POST['contact_name'] ?? ''); ?>" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 0.95rem;">
@@ -183,7 +183,7 @@ get_header();
                         <input type="email" name="email" required placeholder="name@business.com.na" value="<?php echo esc_attr($_POST['email'] ?? ''); ?>" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 0.95rem;">
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                    <div class="ep-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
                         <div>
                             <label style="display: block; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem; font-size: 0.88rem;">Primary Town / Region *</label>
                             <select name="town" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 0.95rem; background: #fff;">

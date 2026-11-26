@@ -60,7 +60,7 @@ get_header();
 
 <!-- Main Contact Grid -->
 <div class="container" style="padding: 4.5rem 1.5rem 5.5rem;">
-    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; align-items: flex-start;">
+    <div class="ep-contact-grid" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; align-items: flex-start;">
         
         <!-- Contact Form Card -->
         <div style="background: #ffffff; border: 1px solid var(--ep-slate-200); border-radius: 16px; padding: 2.5rem; box-shadow: var(--ep-shadow-md);">
@@ -83,7 +83,7 @@ get_header();
 
             <form method="POST" action="">
                 <?php wp_nonce_field('ep_contact_action', 'ep_contact_nonce'); ?>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div class="ep-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
                     <div>
                         <label style="display: block; font-weight: 700; font-size: 0.85rem; color: var(--ep-slate-700); margin-bottom: 0.4rem;">Full Name *</label>
                         <input type="text" name="full_name" required value="<?php echo esc_attr($_POST['full_name'] ?? ''); ?>" placeholder="e.g. Selma Amadhila" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.95rem;">

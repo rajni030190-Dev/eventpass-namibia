@@ -1000,7 +1000,7 @@ if ($event && $event->post_type === 'ep_event') {
             </div>
         <?php endif; ?>
 
-        <div style="display: grid; grid-template-columns: 1.7fr 1.3fr; gap: 3rem; align-items: start;">
+        <div class="ep-checkout-grid" style="display: grid; grid-template-columns: 1.7fr 1.3fr; gap: 3rem; align-items: start;">
             <!-- Left Column: Attendee & Payment Form -->
             <div style="background: #ffffff; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-lg); padding: 2.5rem; box-shadow: var(--ep-shadow-sm);">
 
@@ -1110,7 +1110,7 @@ if ($event && $event->post_type === 'ep_event') {
 
                     <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--ep-navy); margin-bottom: 1.5rem;">1. Attendee Contact Details</h3>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
+                    <div class="ep-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
                         <div>
                             <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Full Name *</label>
                             <input type="text" name="customer_name" required value="<?php echo esc_attr($default_name); ?>" placeholder="First and Last Name" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.95rem;">

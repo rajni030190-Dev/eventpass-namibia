@@ -164,7 +164,7 @@ if ($event_post && $event_post->post_type === 'ep_event') {
 
     <!-- Event Main Details & Booking Grid -->
     <div class="container" style="padding: 3.5rem 1.5rem 5rem;">
-        <div style="display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 3.5rem; align-items: start;">
+        <div class="ep-single-event-grid" style="display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 3.5rem; align-items: start;">
             
             <!-- Left Column: Details, Venue, Organiser -->
             <div>
@@ -177,7 +177,7 @@ if ($event_post && $event_post->post_type === 'ep_event') {
 
                 <div style="margin-bottom: 3rem; background: #ffffff; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-lg); padding: 1.75rem; box-shadow: var(--ep-shadow-sm);">
                     <h3 style="font-size: 1.3rem; font-weight: 800; color: var(--ep-navy); margin-bottom: 1.25rem;">Date, Time & Venue Details</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div class="ep-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                         <div>
                             <span style="font-size: 0.8rem; text-transform: uppercase; color: var(--ep-slate-600); font-weight: 700; display: block; margin-bottom: 0.25rem;">Event Date</span>
                             <strong style="color: var(--ep-navy); font-size: 1rem;"><?php echo esc_html($date_meta); ?></strong>

@@ -388,7 +388,7 @@ $db_categories = function_exists('eventpass_get_event_categories') ? eventpass_g
 <!-- 10. For Event Organisers Promotional Section -->
 <section class="ep-section" style="background: linear-gradient(135deg, var(--ep-navy-deep) 0%, var(--ep-navy) 100%); color: #ffffff; padding: 5rem 0;">
     <div class="container">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3.5rem; align-items: center;">
+        <div class="ep-cta-split-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 3.5rem; align-items: center;">
             <div>
                 <span style="color: var(--ep-cyan); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px;">For Event Organisers</span>
                 <h2 style="font-size: 2.5rem; font-weight: 800; line-height: 1.2; margin: 0.5rem 0 1.25rem;">

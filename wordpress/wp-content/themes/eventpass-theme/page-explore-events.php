@@ -117,7 +117,7 @@ $events_query = new WP_Query($query_args);
 <div class="container" style="padding: 3rem 1.5rem 5rem;">
     <!-- Filter Bar -->
     <div class="ep-filters-card" style="background: #ffffff; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-lg); padding: 1.5rem; margin-bottom: 2.5rem; box-shadow: var(--ep-shadow-sm);">
-        <form method="GET" action="<?php echo esc_url(home_url('/explore-events')); ?>" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) 120px; gap: 1rem; align-items: end;">
+        <form class="ep-filters-form" method="GET" action="<?php echo esc_url(home_url('/explore-events')); ?>" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) 120px; gap: 1rem; align-items: end;">
             <div>
                 <label style="display: block; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--ep-slate-600); margin-bottom: 0.4rem;">Search Event</label>
                 <input type="text" name="keyword" value="<?php echo esc_attr($search_query); ?>" placeholder="Search by name or keyword..." style="width: 100%; padding: 0.7rem 0.9rem; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-md); font-size: 0.95rem;">

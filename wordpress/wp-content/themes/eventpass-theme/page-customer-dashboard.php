@@ -210,7 +210,7 @@ get_header();
         </div>
     <?php endif; ?>
 
-    <div style="display: grid; grid-template-columns: 280px 1fr; gap: 2.5rem; align-items: start;">
+    <div class="ep-cust-dash-grid" style="display: grid; grid-template-columns: 280px 1fr; gap: 2.5rem; align-items: start;">
         <!-- Left Sidebar: Authenticated User Profile -->
         <div class="ep-dashboard-sidebar no-print" style="background: #ffffff; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-lg); padding: 1.75rem; box-shadow: var(--ep-shadow-sm);">
             <div style="text-align: center; padding-bottom: 1.5rem; border-bottom: 1px solid var(--ep-slate-100); margin-bottom: 1.5rem;">

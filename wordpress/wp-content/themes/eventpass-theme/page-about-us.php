@@ -56,7 +56,7 @@ get_header();
 
 <!-- Purpose & Story Split -->
 <div class="container" style="padding: 5.5rem 1.5rem 4rem;">
-    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 3.5rem; align-items: center; margin-bottom: 5rem;">
+    <div class="ep-about-story-grid" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 3.5rem; align-items: center; margin-bottom: 5rem;">
         <div>
             <span style="color: var(--ep-teal-dark); font-weight: 800; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px;">Our Story</span>
             <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.4rem); font-weight: 900; color: var(--ep-navy); margin: 0.5rem 0 1.25rem; line-height: 1.25;">

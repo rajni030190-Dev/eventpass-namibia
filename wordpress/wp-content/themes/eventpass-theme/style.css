@@ -1575,27 +1575,67 @@ img {
         }
 
         /* Responsive Grid & Mobile Viewport Fixes */
+        @media (max-width: 991px) {
+            .ep-calc-grid,
+            .ep-contact-grid,
+            .ep-organiser-reg-grid,
+            .ep-about-story-grid,
+            .ep-single-event-grid,
+            .ep-checkout-grid,
+            .ep-cust-dash-grid,
+            .ep-dashboard-grid,
+            .ep-cta-split-grid,
+            .ep-hiw-step-card,
+            .ep-hiw-step-card.reverse,
+            .ep-filters-form {
+                grid-template-columns: 1fr !important;
+                gap: 2rem !important;
+            }
+        }
+
         @media (max-width: 768px) {
             .ep-calc-card {
                 padding: 1.5rem 1rem !important;
                 border-radius: 14px !important;
             }
-            .ep-calc-grid {
+            .ep-calc-grid,
+            .ep-contact-grid,
+            .ep-organiser-reg-grid,
+            .ep-about-story-grid,
+            .ep-single-event-grid,
+            .ep-checkout-grid,
+            .ep-cust-dash-grid,
+            .ep-dashboard-grid,
+            .ep-cta-split-grid,
+            .ep-hiw-step-card,
+            .ep-hiw-step-card.reverse,
+            .ep-form-grid-2,
+            .ep-filters-form {
                 grid-template-columns: 1fr !important;
                 gap: 1.5rem !important;
             }
+
+            /* Container breathing room on mobile */
+            .container {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+
             #calcNetDisplay {
                 font-size: 1.85rem !important;
             }
             #calcGrossDisplay {
                 font-size: 1.5rem !important;
             }
-            .ep-single-event-grid,
-            .ep-checkout-grid,
-            .ep-dashboard-grid,
-            .ep-hiw-grid {
-                grid-template-columns: 1fr !important;
-                gap: 2rem !important;
+
+            /* Ensure cards & inputs fit small screens comfortably */
+            input, select, textarea, button {
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .ep-hiw-visual-box {
+                padding: 1.25rem !important;
             }
         }
         @media (max-width: 480px) {
@@ -1603,6 +1643,13 @@ img {
                 padding: 1.25rem 0.85rem !important;
             }
             #calcAttendeesDisplay, #calcPriceDisplay {
+                font-size: 1.35rem !important;
+            }
+            .ep-form-grid-2 {
+                grid-template-columns: 1fr !important;
+                gap: 0.85rem !important;
+            }
+        }
                 font-size: 1.1rem !important;
             }
         }
