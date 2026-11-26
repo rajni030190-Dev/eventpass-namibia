@@ -21,10 +21,15 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_reg_nonce']) ) {
         $phone     = sanitize_text_field( $_POST['phone'] ?? '' );
         $password  = $_POST['password'] ?? '';
 
+        // Phone validation: strip spaces/dashes, must have 9-15 digits (Namibia +264 format)
+        $phone_digits = preg_replace( '/[^0-9]/', '', $phone );
+
         if ( empty( $full_name ) || empty( $email ) || empty( $password ) ) {
             $reg_error = 'Please complete all required fields.';
         } elseif ( ! is_email( $email ) ) {
             $reg_error = 'Please enter a valid email address.';
+        } elseif ( ! empty( $phone ) && ( strlen( $phone_digits ) < 9 || strlen( $phone_digits ) > 15 || ! preg_match( '/^\+?[0-9\s\-]{9,20}$/', $phone ) ) ) {
+            $reg_error = 'Please enter a valid phone number (e.g. +264 81 123 4567).';
         } elseif ( email_exists( $email ) ) {
             $reg_error = 'An account with this email address already exists. Please sign in instead.';
         } elseif ( strlen( $password ) < 8 ) {
@@ -117,7 +122,8 @@ get_header();
 
             <div style="margin-bottom: 1.25rem;">
                 <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem;">Mobile Phone Number <span style="color: var(--ep-danger);">*</span></label>
-                <input type="tel" name="phone" required placeholder="+264 81 123 4567" value="<?php echo esc_attr( $_POST['phone'] ?? '' ); ?>" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-md); font-size: 0.95rem;">
+                <input type="tel" name="phone" required placeholder="+264 81 123 4567" value="<?php echo esc_attr( $_POST['phone'] ?? '' ); ?>" pattern="^\+?[0-9\s\-]{9,20}$" maxlength="20" title="Enter a valid phone number e.g. +264 81 123 4567" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-md); font-size: 0.95rem;">
+                <small style="color: #64748B; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Namibia format: +264 81 123 4567 (digits and + only)</small>
             </div>
 
             <div style="margin-bottom: 1.5rem;">

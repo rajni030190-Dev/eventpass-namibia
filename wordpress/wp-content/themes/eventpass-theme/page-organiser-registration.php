@@ -20,8 +20,13 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_org_app_nonce']) 
         $category = sanitize_text_field( $_POST['category'] ?? '' );
         $bank     = sanitize_text_field( $_POST['bank'] ?? '' );
 
+        // Phone validation
+        $org_phone_digits = preg_replace( '/[^0-9]/', '', $phone );
+
         if ( empty($org_name) || empty($contact) || empty($phone) || empty($email) ) {
             $app_error = 'Please fill in all mandatory fields.';
+        } elseif ( strlen( $org_phone_digits ) < 9 || strlen( $org_phone_digits ) > 15 || ! preg_match( '/^\+?[0-9\s\-]{9,20}$/', $phone ) ) {
+            $app_error = 'Please enter a valid phone number (e.g. +264 81 123 4567).';
         } elseif ( ! is_email( $email ) ) {
             $app_error = 'Please enter a valid business email address.';
         } else {
@@ -174,7 +179,7 @@ get_header();
                         </div>
                         <div>
                             <label style="display: block; font-weight: 700; color: var(--ep-slate-800); margin-bottom: 0.4rem; font-size: 0.88rem;">Mobile Phone *</label>
-                            <input type="tel" name="phone" required placeholder="+264 81 123 4567" value="<?php echo esc_attr($_POST['phone'] ?? ''); ?>" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 0.95rem;">
+                            <input type="tel" name="phone" required placeholder="+264 81 123 4567" value="<?php echo esc_attr($_POST['phone'] ?? ''); ?>" pattern="^\+?[0-9\s\-]{9,20}$" maxlength="20" title="Enter a valid phone number e.g. +264 81 123 4567" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 0.95rem;">
                         </div>
                     </div>
 

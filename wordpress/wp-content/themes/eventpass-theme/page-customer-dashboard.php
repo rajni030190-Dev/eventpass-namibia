@@ -44,8 +44,13 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_cust_profile_acti
         $new_phone = sanitize_text_field( trim($_POST['profile_phone'] ?? '') );
         $new_pass  = $_POST['profile_new_password'] ?? '';
 
+        // Phone validation: strip spaces/dashes, must have 9-15 digits
+        $phone_digits_chk = preg_replace( '/[^0-9]/', '', $new_phone );
+
         if ( empty($new_name) ) {
             $profile_err = 'Full Name cannot be empty.';
+        } elseif ( ! empty($new_phone) && ( strlen( $phone_digits_chk ) < 9 || strlen( $phone_digits_chk ) > 15 || ! preg_match( '/^\+?[0-9\s\-]{9,20}$/', $new_phone ) ) ) {
+            $profile_err = 'Please enter a valid phone number (e.g. +264 81 123 4567).';
         } elseif ( ! empty($new_pass) && strlen($new_pass) < 8 ) {
             $profile_err = 'New password must be at least 8 characters long.';
         } else {
@@ -476,7 +481,7 @@ get_header();
                         </div>
                         <div>
                             <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">Mobile Phone (+264)</label>
-                            <input type="tel" name="profile_phone" value="<?php echo esc_attr($phone_number === '+264 (Unspecified)' ? '' : $phone_number); ?>" placeholder="+264 81 123 4567" style="width: 100%; padding: 0.65rem 0.9rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem;">
+                            <input type="tel" name="profile_phone" value="<?php echo esc_attr($phone_number === '+264 (Unspecified)' ? '' : $phone_number); ?>" placeholder="+264 81 123 4567" pattern="^\+?[0-9\s\-]{9,20}$" maxlength="20" title="Enter a valid phone number e.g. +264 81 123 4567" style="width: 100%; padding: 0.65rem 0.9rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem;">
                         </div>
                     </div>
                     <div class="ep-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
