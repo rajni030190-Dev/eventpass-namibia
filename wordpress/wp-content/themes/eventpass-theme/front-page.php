@@ -232,6 +232,142 @@ $db_categories = function_exists('eventpass_get_event_categories') ? eventpass_g
     </div>
 </section>
 
+<!-- SOW 4.1: Promotional Banners Section -->
+<section class="ep-section" style="background: var(--ep-slate-50); padding: 4.5rem 0; border-bottom: 1px solid var(--ep-slate-200);">
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem;">
+            <div>
+                <span style="color: var(--ep-teal-dark); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px;">Exclusive Highlights</span>
+                <h2 style="font-size: 2.15rem; font-weight: 800; color: var(--ep-navy); margin-top: 0.25rem;">Promotional Spotlights & Announcements</h2>
+                <p style="color: var(--ep-slate-600); font-size: 0.98rem; margin-top: 0.35rem;">Special event promotions, headline partnerships and mobile platform access across Namibia.</p>
+            </div>
+        </div>
+
+        <div class="ep-promo-grid">
+            <!-- Promotional Banner 1: Headline Promoted Event -->
+            <?php
+            $promo_query = new WP_Query([
+                'post_type'      => 'ep_event',
+                'post_status'    => 'publish',
+                'posts_per_page' => 1,
+                'orderby'        => 'date',
+                'order'          => 'DESC',
+            ]);
+
+            if ($promo_query->have_posts()) :
+                while ($promo_query->have_posts()) : $promo_query->the_post();
+                    $p_id       = get_the_ID();
+                    $p_title    = get_the_title();
+                    $p_venue    = get_post_meta($p_id, '_ep_event_venue', true) ?: 'Windhoek, Namibia';
+                    $p_town     = get_post_meta($p_id, '_ep_event_town', true) ?: 'windhoek';
+                    $p_date     = get_post_meta($p_id, '_ep_event_date', true) ?: '2026-12-15';
+                    $p_time     = get_post_meta($p_id, '_ep_event_time', true) ?: '18:00 CAT';
+                    $p_price    = get_post_meta($p_id, '_ep_min_price', true) ?: 150;
+                    $p_poster   = get_post_meta($p_id, '_ep_event_poster', true);
+                    $p_image    = get_post_meta($p_id, '_ep_event_image', true) ?: ($p_poster ?: get_template_directory_uri() . '/assets/images/hero/concert-lights.jpg');
+                    $p_cat      = get_the_terms($p_id, 'ep_event_category');
+                    $p_cat_name = (!empty($p_cat) && !is_wp_error($p_cat)) ? $p_cat[0]->name : 'Live Event';
+            ?>
+            <div style="position: relative; border-radius: 18px; overflow: hidden; background: #060E20; min-height: 380px; display: flex; flex-direction: column; justify-content: flex-end; padding: clamp(1.5rem, 3vw, 2.5rem); box-shadow: 0 20px 40px rgba(6,14,32,0.18); border: 1px solid rgba(0, 180, 216, 0.25);">
+                <!-- Background Image with Scrim -->
+                <img src="<?php echo esc_url($p_image); ?>" alt="<?php echo esc_attr($p_title); ?>" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.42; filter: saturate(1.2);">
+                <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(6,14,32,0.15) 0%, rgba(6,14,32,0.75) 50%, rgba(6,14,32,0.98) 100%);"></div>
+
+                <!-- Content -->
+                <div style="position: relative; z-index: 2;">
+                    <div style="display: flex; gap: 0.6rem; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap;">
+                        <span style="background: #E11D48; color: #ffffff; padding: 0.3rem 0.85rem; border-radius: 999px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 2px 10px rgba(225,29,72,0.4);">
+                            🔥 SPONSORED PROMOTION
+                        </span>
+                        <span style="background: rgba(255,255,255,0.18); backdrop-filter: blur(4px); color: #ffffff; padding: 0.3rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">
+                            <?php echo esc_html($p_cat_name); ?>
+                        </span>
+                    </div>
+
+                    <h3 style="font-size: clamp(1.5rem, 2.3vw, 2.1rem); font-weight: 900; color: #ffffff; line-height: 1.2; margin-bottom: 0.85rem; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">
+                        <?php echo esc_html($p_title); ?>
+                    </h3>
+
+                    <div style="display: flex; gap: 1.25rem; align-items: center; color: #CBD5E1; font-size: 0.92rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                        <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                            📅 <?php echo esc_html($p_date); ?>
+                        </span>
+                        <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                            📍 <?php echo esc_html($p_venue); ?>, <?php echo esc_html(ucfirst($p_town)); ?>
+                        </span>
+                        <span style="display: inline-flex; align-items: center; gap: 0.4rem; color: var(--ep-cyan, #38BDF8); font-weight: 700;">
+                            🎟️ From N$ <?php echo number_format($p_price, 2); ?>
+                        </span>
+                    </div>
+
+                    <div style="display: flex; gap: 0.85rem; flex-wrap: wrap; align-items: center;">
+                        <a href="<?php echo esc_url(get_permalink($p_id)); ?>" class="ep-btn ep-btn-primary" style="padding: 0.75rem 1.6rem; font-size: 0.95rem; font-weight: 800; box-shadow: 0 8px 20px rgba(13,148,136,0.4);">
+                            <span>Book Tickets Now</span>
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </a>
+                        <a href="<?php echo esc_url(get_permalink($p_id)); ?>" class="ep-btn ep-btn-outline" style="color: #ffffff; border-color: rgba(255,255,255,0.3); padding: 0.75rem 1.2rem; font-size: 0.95rem;">
+                            <span>View Event Details</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <?php
+                endwhile;
+                wp_reset_postdata();
+            endif;
+            ?>
+
+            <!-- Promotional Banner 2: Ticket Scanner App (Coming Soon) -->
+            <div style="position: relative; border-radius: 18px; overflow: hidden; background: linear-gradient(145deg, #0B1936 0%, #030816 100%); padding: clamp(1.5rem, 3vw, 2.25rem); display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(56, 189, 248, 0.25); box-shadow: 0 20px 40px rgba(6,14,32,0.18);">
+                <div>
+                    <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38BDF8; padding: 0.3rem 0.85rem; border-radius: 999px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 1rem;">
+                        📱 Mobile App • Coming Soon
+                    </div>
+
+                    <h3 style="font-size: 1.65rem; font-weight: 900; color: #ffffff; line-height: 1.25; margin-bottom: 0.75rem;">
+                        EventPass Gate Scanner App
+                    </h3>
+
+                    <p style="color: #94A3B8; font-size: 0.92rem; line-height: 1.6; margin-bottom: 1.25rem;">
+                        Empowering event organisers and gate marshals across Namibia with instant, offline-capable cryptographic QR pass verification. Turn any smartphone into a high-speed access gate scanner.
+                    </p>
+
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; color: #E2E8F0; font-size: 0.85rem;">
+                            <span style="color: #10B981; font-weight: bold;">✓</span>
+                            <span>Sub-second QR scan verification & anti-duplicate protection</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; color: #E2E8F0; font-size: 0.85rem;">
+                            <span style="color: #10B981; font-weight: bold;">✓</span>
+                            <span>Works 100% offline at remote Namibian venues</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; color: #E2E8F0; font-size: 0.85rem;">
+                            <span style="color: #10B981; font-weight: bold;">✓</span>
+                            <span>Live attendee attendance counters & instant sync</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+                        <span style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; padding: 0.5rem 0.85rem; display: inline-flex; align-items: center; gap: 0.45rem; color: #ffffff; font-size: 0.8rem; font-weight: 700;">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M3.609 1.814L13.792 12 3.61 22.186a2.41 2.41 0 01-.61-1.63V3.444c0-.64.223-1.218.61-1.63zM15.207 13.414l2.423 2.424-11.455 6.47 9.032-8.894zm2.423-5.252l-2.423 2.424L6.175 1.692l11.455 6.47zm1.18 1.18c.55.31.933.865.933 1.658s-.383 1.348-.933 1.658l-1.895 1.07-2.614-2.614 2.614-2.614 1.895 1.072z"/></svg>
+                            Google Play (Soon)
+                        </span>
+                        <span style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; padding: 0.5rem 0.85rem; display: inline-flex; align-items: center; gap: 0.45rem; color: #ffffff; font-size: 0.8rem; font-weight: 700;">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.84c.67-.82 1.12-1.95.99-3.09-.97.04-2.14.65-2.83 1.46-.61.71-1.14 1.87-1 2.99 1.09.08 2.18-.55 2.84-1.36z"/></svg>
+                            App Store (Soon)
+                        </span>
+                        <a href="<?php echo esc_url(home_url('/gate-scanner')); ?>" class="ep-btn ep-btn-sm ep-btn-outline" style="color: var(--ep-cyan, #38BDF8); border-color: rgba(56,189,248,0.4); font-size: 0.78rem;">
+                            Try Web Scanner &rarr;
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- 5. Upcoming & 7. Popular Events Section -->
 <section class="ep-section" style="padding: 4.5rem 0;">
     <div class="container">

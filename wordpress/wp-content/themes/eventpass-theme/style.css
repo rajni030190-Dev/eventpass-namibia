@@ -1768,3 +1768,16 @@ img {
                 transform: none !important;
             }
         }
+
+/* SOW 4.1: Promotional Banners Grid */
+.ep-promo-grid {
+    display: grid;
+    grid-template-columns: 1.55fr 1fr;
+    gap: 1.75rem;
+    align-items: stretch;
+}
+@media (max-width: 992px) {
+    .ep-promo-grid {
+        grid-template-columns: 1fr;
+    }
+}
