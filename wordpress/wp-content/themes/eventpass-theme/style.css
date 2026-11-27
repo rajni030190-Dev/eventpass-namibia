@@ -103,9 +103,9 @@ img {
 }
 
 .ep-logo-link img {
-  height: 58px;
+  height: 56px;
   width: auto;
-  max-height: 60px;
+  max-height: 58px;
 }
 
 .ep-nav-menu {
@@ -1353,9 +1353,9 @@ img {
             position: relative;
         }
         .ep-logo-link img {
-            height: 58px;
+            height: 56px;
             width: auto;
-            max-height: 60px;
+            max-height: 58px;
             display: block;
             max-width: 100%;
         }
