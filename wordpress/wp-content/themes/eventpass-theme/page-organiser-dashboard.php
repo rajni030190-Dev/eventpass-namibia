@@ -288,6 +288,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_create_event_nonce
             ]);
 
             if (!is_wp_error($new_event_id)) {
+                // SOW 4.1: Handle File Uploads (Poster & Gallery)
+                if (!empty($_FILES['event_poster_file']['name']) && $_FILES['event_poster_file']['error'] === UPLOAD_ERR_OK) {
+                    require_once(ABSPATH . 'wp-admin/includes/image.php');
+                    require_once(ABSPATH . 'wp-admin/includes/file.php');
+                    require_once(ABSPATH . 'wp-admin/includes/media.php');
+                    $attach_id = media_handle_upload('event_poster_file', $new_event_id);
+                    if (!is_wp_error($attach_id)) {
+                        $up_url = wp_get_attachment_url($attach_id);
+                        if ($up_url) {
+                            $poster = $up_url;
+                            $image  = $up_url;
+                            set_post_thumbnail($new_event_id, $attach_id);
+                        }
+                    }
+                }
+
+                if (!empty($_FILES['event_gallery_files']['name'][0])) {
+                    require_once(ABSPATH . 'wp-admin/includes/image.php');
+                    require_once(ABSPATH . 'wp-admin/includes/file.php');
+                    require_once(ABSPATH . 'wp-admin/includes/media.php');
+                    $g_count = count($_FILES['event_gallery_files']['name']);
+                    for ($i = 0; $i < $g_count; $i++) {
+                        if (!empty($_FILES['event_gallery_files']['tmp_name'][$i]) && $_FILES['event_gallery_files']['error'][$i] === UPLOAD_ERR_OK) {
+                            $_FILES['ep_temp_gallery_upload'] = [
+                                'name'     => $_FILES['event_gallery_files']['name'][$i],
+                                'type'     => $_FILES['event_gallery_files']['type'][$i],
+                                'tmp_name' => $_FILES['event_gallery_files']['tmp_name'][$i],
+                                'error'    => $_FILES['event_gallery_files']['error'][$i],
+                                'size'     => $_FILES['event_gallery_files']['size'][$i],
+                            ];
+                            $g_attach_id = media_handle_upload('ep_temp_gallery_upload', $new_event_id);
+                            if (!is_wp_error($g_attach_id)) {
+                                $g_url = wp_get_attachment_url($g_attach_id);
+                                if ($g_url) {
+                                    $gallery_urls[] = $g_url;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 wp_set_object_terms($new_event_id, $category, 'ep_event_category');
                 update_post_meta($new_event_id, '_ep_event_venue', $venue);
                 update_post_meta($new_event_id, '_ep_event_town', $town);
@@ -378,6 +419,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_edit_event_nonce']
                 'post_content' => $desc,
             ]);
 
+            // SOW 4.1: Handle File Uploads for Edit (Poster & Gallery)
+            if (!empty($_FILES['edit_event_poster_file']['name']) && $_FILES['edit_event_poster_file']['error'] === UPLOAD_ERR_OK) {
+                require_once(ABSPATH . 'wp-admin/includes/image.php');
+                require_once(ABSPATH . 'wp-admin/includes/file.php');
+                require_once(ABSPATH . 'wp-admin/includes/media.php');
+                $attach_id = media_handle_upload('edit_event_poster_file', $edit_event_id);
+                if (!is_wp_error($attach_id)) {
+                    $up_url = wp_get_attachment_url($attach_id);
+                    if ($up_url) {
+                        $edit_poster = $up_url;
+                        set_post_thumbnail($edit_event_id, $attach_id);
+                    }
+                }
+            }
+
+            if (!empty($_FILES['edit_event_gallery_files']['name'][0])) {
+                require_once(ABSPATH . 'wp-admin/includes/image.php');
+                require_once(ABSPATH . 'wp-admin/includes/file.php');
+                require_once(ABSPATH . 'wp-admin/includes/media.php');
+                $g_count = count($_FILES['edit_event_gallery_files']['name']);
+                for ($i = 0; $i < $g_count; $i++) {
+                    if (!empty($_FILES['edit_event_gallery_files']['tmp_name'][$i]) && $_FILES['edit_event_gallery_files']['error'][$i] === UPLOAD_ERR_OK) {
+                        $_FILES['ep_temp_gallery_upload'] = [
+                            'name'     => $_FILES['edit_event_gallery_files']['name'][$i],
+                            'type'     => $_FILES['edit_event_gallery_files']['type'][$i],
+                            'tmp_name' => $_FILES['edit_event_gallery_files']['tmp_name'][$i],
+                            'error'    => $_FILES['edit_event_gallery_files']['error'][$i],
+                            'size'     => $_FILES['edit_event_gallery_files']['size'][$i],
+                        ];
+                        $g_attach_id = media_handle_upload('ep_temp_gallery_upload', $edit_event_id);
+                        if (!is_wp_error($g_attach_id)) {
+                            $g_url = wp_get_attachment_url($g_attach_id);
+                            if ($g_url) {
+                                $edit_gallery_urls[] = $g_url;
+                            }
+                        }
+                    }
+                }
+            }
+
             wp_set_object_terms($edit_event_id, $category, 'ep_event_category');
             update_post_meta($edit_event_id, '_ep_event_venue', $venue);
             update_post_meta($edit_event_id, '_ep_event_town', $town);
@@ -385,7 +466,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_edit_event_nonce']
             update_post_meta($edit_event_id, '_ep_event_time', $time);
             update_post_meta($edit_event_id, '_ep_event_poster', $edit_poster);
             update_post_meta($edit_event_id, '_ep_event_gallery', $edit_gallery_urls);
-            if (!empty($edit_poster) && empty(get_post_meta($edit_event_id, '_ep_event_image', true))) {
+            if (!empty($edit_poster)) {
                 update_post_meta($edit_event_id, '_ep_event_image', $edit_poster);
             }
 
@@ -962,7 +1043,7 @@ get_header();
             <p style="color: var(--ep-slate-600); font-size: 0.95rem; margin: 0;">Configure your event details. Categories are loaded dynamically from the live database.</p>
         </div>
 
-        <form id="epCreateEventForm" action="<?php echo esc_url(home_url('/organiser-dashboard')); ?>" method="POST">
+        <form id="epCreateEventForm" action="<?php echo esc_url(home_url('/organiser-dashboard')); ?>" method="POST" enctype="multipart/form-data">
             <?php wp_nonce_field('ep_create_event_action', 'ep_create_event_nonce'); ?>
 
             <div style="display: flex; flex-direction: column; gap: 1.25rem;">
@@ -1048,21 +1129,54 @@ get_header();
                     <textarea name="event_description" rows="3" required placeholder="Describe event highlights..." style="width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 10px; font-size: 0.95rem;"></textarea>
                 </div>
 
-                <!-- SOW 4.1: Event Poster & Photo Gallery Inputs -->
-                <div style="background: #F8FAFC; border: 1px solid var(--ep-slate-200); border-radius: 12px; padding: 1.15rem;">
-                    <div style="margin-bottom: 0.85rem;">
+                <!-- SOW 4.1: Event Poster & Photo Gallery Media Uploads -->
+                <div style="background: #F8FAFC; border: 1px solid var(--ep-slate-200); border-radius: 12px; padding: 1.25rem;">
+                    <strong style="color: var(--ep-navy); font-size: 0.9rem; display: block; margin-bottom: 0.75rem;">
+                        🖼️ Event Media & Visual Atmosphere (Upload Files)
+                    </strong>
+
+                    <!-- Poster Upload -->
+                    <div style="margin-bottom: 1rem; background: #fff; padding: 0.9rem 1rem; border-radius: 10px; border: 1px solid var(--ep-slate-200);">
                         <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">
-                            🖼️ Event Poster Image URL
+                            Official Event Poster / Flyer
                         </label>
-                        <input type="url" name="event_poster" placeholder="https://domain.com.na/poster.jpg (leave blank for default)" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;">
-                        <small style="color: #64748B; font-size: 0.75rem;">Official promotional flyer/poster displayed on the event page.</small>
+                        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                            <label for="create_poster_file" style="cursor: pointer; background: var(--ep-teal-dark, #0d9488); color: #fff; padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                📁 Choose Poster from Device
+                            </label>
+                            <input type="file" name="event_poster_file" id="create_poster_file" accept="image/*" style="display: none;" onchange="epPreviewPoster(this, 'create_poster_preview', 'create_poster_status')">
+                            <span id="create_poster_status" style="font-size: 0.82rem; color: #64748B;">No file chosen (JPG, PNG, WebP)</span>
+                        </div>
+                        <div id="create_poster_preview" style="display: none; margin-top: 0.75rem; max-width: 180px; border-radius: 8px; overflow: hidden; border: 2px solid #0d9488; box-shadow: 0 4px 10px rgba(0,0,0,0.08);">
+                            <img src="" style="width: 100%; height: auto; display: block;">
+                        </div>
+                        <details style="margin-top: 0.65rem;">
+                            <summary style="font-size: 0.78rem; color: #0d9488; cursor: pointer; font-weight: 600;">🔗 Or use an image URL instead</summary>
+                            <div style="margin-top: 0.4rem;">
+                                <input type="url" name="event_poster" id="create_event_poster" placeholder="https://domain.com.na/poster.jpg (leave blank for default)" style="width: 100%; padding: 0.55rem 0.75rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.85rem; background: #fff;">
+                            </div>
+                        </details>
                     </div>
-                    <div>
+
+                    <!-- Gallery Upload -->
+                    <div style="background: #fff; padding: 0.9rem 1rem; border-radius: 10px; border: 1px solid var(--ep-slate-200);">
                         <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">
-                            📸 Event Photo Gallery (Multiple URLs, comma or newline separated)
+                            Event Photo Gallery (Atmosphere & Highlights)
                         </label>
-                        <textarea name="event_gallery" rows="2" placeholder="https://image1.jpg, https://image2.jpg" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;"></textarea>
-                        <small style="color: #64748B; font-size: 0.75rem;">Atmosphere and highlight photos shown in the Event Gallery grid.</small>
+                        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                            <label for="create_gallery_files" style="cursor: pointer; background: #0F172A; color: #fff; padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                📸 Select Gallery Photos (Multiple)
+                            </label>
+                            <input type="file" name="event_gallery_files[]" id="create_gallery_files" multiple accept="image/*" style="display: none;" onchange="epPreviewGallery(this, 'create_gallery_preview', 'create_gallery_status')">
+                            <span id="create_gallery_status" style="font-size: 0.82rem; color: #64748B;">Select multiple photos</span>
+                        </div>
+                        <div id="create_gallery_preview" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;"></div>
+                        <details style="margin-top: 0.65rem;">
+                            <summary style="font-size: 0.78rem; color: #0d9488; cursor: pointer; font-weight: 600;">🔗 Or enter gallery image URLs manually</summary>
+                            <div style="margin-top: 0.4rem;">
+                                <textarea name="event_gallery" id="create_event_gallery" rows="2" placeholder="https://image1.jpg, https://image2.jpg" style="width: 100%; padding: 0.55rem 0.75rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.85rem; background: #fff;"></textarea>
+                            </div>
+                        </details>
                     </div>
                 </div>
 
@@ -1112,7 +1226,7 @@ get_header();
             <p style="color: var(--ep-slate-600); font-size: 0.95rem; margin: 0;">Update event schedule, venue location, description, and dynamic ticket tier quotas.</p>
         </div>
 
-        <form id="epEditEventForm" action="<?php echo esc_url(home_url('/organiser-dashboard')); ?>" method="POST">
+        <form id="epEditEventForm" action="<?php echo esc_url(home_url('/organiser-dashboard')); ?>" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="edit_event_id" id="edit_event_id" value="">
             <input type="hidden" name="ep_edit_event_nonce" id="edit_event_nonce" value="">
 
@@ -1194,21 +1308,56 @@ get_header();
                     <textarea name="edit_event_description" id="edit_event_description" rows="3" required style="width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 10px; font-size: 0.95rem;"></textarea>
                 </div>
 
-                <!-- SOW 4.1: Event Poster & Photo Gallery Inputs for Edit -->
-                <div style="background: #F8FAFC; border: 1px solid var(--ep-slate-200); border-radius: 12px; padding: 1.15rem;">
-                    <div style="margin-bottom: 0.85rem;">
+                <!-- SOW 4.1: Event Poster & Photo Gallery Media Uploads for Edit -->
+                <div style="background: #F8FAFC; border: 1px solid var(--ep-slate-200); border-radius: 12px; padding: 1.25rem;">
+                    <strong style="color: var(--ep-navy); font-size: 0.9rem; display: block; margin-bottom: 0.75rem;">
+                        🖼️ Event Media & Visual Atmosphere (Upload Files)
+                    </strong>
+
+                    <!-- Poster Edit / Upload -->
+                    <div style="margin-bottom: 1rem; background: #fff; padding: 0.9rem 1rem; border-radius: 10px; border: 1px solid var(--ep-slate-200);">
                         <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">
-                            🖼️ Event Poster Image URL
+                            Official Event Poster / Flyer
                         </label>
-                        <input type="url" name="edit_event_poster" id="edit_event_poster" placeholder="https://domain.com.na/poster.jpg" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;">
-                        <small style="color: #64748B; font-size: 0.75rem;">Official promotional flyer/poster displayed on the event page.</small>
+                        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                            <label for="edit_poster_file" style="cursor: pointer; background: var(--ep-teal-dark, #0d9488); color: #fff; padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                📁 Upload New Poster File
+                            </label>
+                            <input type="file" name="edit_event_poster_file" id="edit_poster_file" accept="image/*" style="display: none;" onchange="epPreviewPoster(this, 'edit_poster_preview', 'edit_poster_status')">
+                            <span id="edit_poster_status" style="font-size: 0.82rem; color: #64748B;">Keep current or choose new</span>
+                        </div>
+                        <div id="edit_poster_preview" style="display: none; margin-top: 0.75rem; max-width: 180px; border-radius: 8px; overflow: hidden; border: 2px solid #0d9488; box-shadow: 0 4px 10px rgba(0,0,0,0.08);">
+                            <img src="" id="edit_poster_preview_img" style="width: 100%; height: auto; display: block;">
+                        </div>
+                        <details style="margin-top: 0.65rem;">
+                            <summary style="font-size: 0.78rem; color: #0d9488; cursor: pointer; font-weight: 600;">🔗 Or edit image URL directly</summary>
+                            <div style="margin-top: 0.4rem;">
+                                <input type="url" name="edit_event_poster" id="edit_event_poster" placeholder="https://domain.com.na/poster.jpg" style="width: 100%; padding: 0.55rem 0.75rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.85rem; background: #fff;">
+                            </div>
+                        </details>
                     </div>
-                    <div>
+
+                    <!-- Gallery Edit / Upload -->
+                    <div style="background: #fff; padding: 0.9rem 1rem; border-radius: 10px; border: 1px solid var(--ep-slate-200);">
                         <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">
-                            📸 Event Photo Gallery (Multiple URLs, comma or newline separated)
+                            Event Photo Gallery (Add More Photos)
                         </label>
-                        <textarea name="edit_event_gallery" id="edit_event_gallery" rows="2" placeholder="https://image1.jpg, https://image2.jpg" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;"></textarea>
-                        <small style="color: #64748B; font-size: 0.75rem;">Atmosphere and highlight photos shown in the Event Gallery grid.</small>
+                        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                            <label for="edit_gallery_files" style="cursor: pointer; background: #0F172A; color: #fff; padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                📸 Select Additional Photos
+                            </label>
+                            <input type="file" name="edit_event_gallery_files[]" id="edit_gallery_files" multiple accept="image/*" style="display: none;" onchange="epPreviewGallery(this, 'edit_gallery_preview', 'edit_gallery_status')">
+                            <span id="edit_gallery_status" style="font-size: 0.82rem; color: #64748B;">Upload more photos to append</span>
+                        </div>
+                        <!-- Current & New Gallery Previews -->
+                        <div id="edit_existing_gallery_preview" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;"></div>
+                        <div id="edit_gallery_preview" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;"></div>
+                        <details style="margin-top: 0.65rem;">
+                            <summary style="font-size: 0.78rem; color: #0d9488; cursor: pointer; font-weight: 600;">🔗 Or edit gallery URLs manually</summary>
+                            <div style="margin-top: 0.4rem;">
+                                <textarea name="edit_event_gallery" id="edit_event_gallery" rows="2" placeholder="https://image1.jpg, https://image2.jpg" style="width: 100%; padding: 0.55rem 0.75rem; border: 1px solid var(--ep-slate-200); border-radius: 6px; font-size: 0.85rem; background: #fff;"></textarea>
+                            </div>
+                        </details>
                     </div>
                 </div>
 
@@ -1319,6 +1468,65 @@ const ORG_REST_NONCE         = '<?php echo esc_js(wp_create_nonce('wp_rest')); ?
 let curOrgEventId = 0;
 let orgRosterList = [];
 
+// Image Upload Preview Helpers (SOW 4.1)
+function epPreviewPoster(input, previewContainerId, statusId) {
+    const file = input.files && input.files[0];
+    const previewContainer = document.getElementById(previewContainerId);
+    const statusSpan = document.getElementById(statusId);
+    if (!file) return;
+
+    if (statusSpan) {
+        statusSpan.textContent = `✓ Selected: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+        statusSpan.style.color = '#059669';
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        if (previewContainer) {
+            const img = previewContainer.querySelector('img');
+            if (img) img.src = e.target.result;
+            previewContainer.style.display = 'block';
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function epPreviewGallery(input, previewContainerId, statusId) {
+    const files = input.files;
+    const previewContainer = document.getElementById(previewContainerId);
+    const statusSpan = document.getElementById(statusId);
+    if (!files || files.length === 0) return;
+
+    if (statusSpan) {
+        statusSpan.textContent = `✓ ${files.length} photo(s) selected for upload`;
+        statusSpan.style.color = '#059669';
+    }
+
+    if (previewContainer) {
+        previewContainer.innerHTML = '';
+        Array.from(files).forEach(f => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const wrap = document.createElement('div');
+                wrap.style.width = '60px';
+                wrap.style.height = '60px';
+                wrap.style.borderRadius = '8px';
+                wrap.style.overflow = 'hidden';
+                wrap.style.border = '2px solid #0d9488';
+                wrap.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                wrap.appendChild(img);
+                previewContainer.appendChild(wrap);
+            };
+            reader.readAsDataURL(f);
+        });
+    }
+}
+
 function openEditEventModal(data) {
     document.getElementById('edit_event_id').value = data.id;
     document.getElementById('edit_event_nonce').value = data.nonce;
@@ -1355,6 +1563,57 @@ function openEditEventModal(data) {
     }
     if (document.getElementById('edit_event_gallery')) {
         document.getElementById('edit_event_gallery').value = data.gallery || '';
+    }
+
+    // SOW 4.1: Populate current poster preview in Edit Modal
+    const editPosterPreview = document.getElementById('edit_poster_preview');
+    const editPosterImg = document.getElementById('edit_poster_preview_img');
+    const editPosterStatus = document.getElementById('edit_poster_status');
+    if (data.poster) {
+        if (editPosterImg) editPosterImg.src = data.poster;
+        if (editPosterPreview) editPosterPreview.style.display = 'block';
+        if (editPosterStatus) {
+            editPosterStatus.textContent = 'Current Poster active (choose new file to replace)';
+            editPosterStatus.style.color = '#059669';
+        }
+    } else {
+        if (editPosterPreview) editPosterPreview.style.display = 'none';
+        if (editPosterStatus) {
+            editPosterStatus.textContent = 'No poster set yet (choose file to upload)';
+            editPosterStatus.style.color = '#64748B';
+        }
+    }
+
+    // SOW 4.1: Populate current gallery thumbnails in Edit Modal
+    const existingGalleryPreview = document.getElementById('edit_existing_gallery_preview');
+    if (existingGalleryPreview) {
+        existingGalleryPreview.innerHTML = '';
+        if (data.gallery) {
+            const gUrls = data.gallery.split(',').map(u => u.trim()).filter(Boolean);
+            gUrls.forEach(u => {
+                const wrap = document.createElement('div');
+                wrap.style.width = '52px';
+                wrap.style.height = '52px';
+                wrap.style.borderRadius = '6px';
+                wrap.style.overflow = 'hidden';
+                wrap.style.border = '2px solid #CBD5E1';
+                wrap.title = 'Saved Gallery Photo';
+                const img = document.createElement('img');
+                img.src = u;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                wrap.appendChild(img);
+                existingGalleryPreview.appendChild(wrap);
+            });
+        }
+    }
+    const editNewGalleryPreview = document.getElementById('edit_gallery_preview');
+    if (editNewGalleryPreview) editNewGalleryPreview.innerHTML = '';
+    const editGalleryStatus = document.getElementById('edit_gallery_status');
+    if (editGalleryStatus) {
+        editGalleryStatus.textContent = 'Upload more photos to append';
+        editGalleryStatus.style.color = '#64748B';
     }
 
     document.getElementById('edit_tier_gen_price').value = data.gen_price;
