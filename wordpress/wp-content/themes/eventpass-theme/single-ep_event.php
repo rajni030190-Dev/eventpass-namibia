@@ -116,6 +116,17 @@ if ($event_post && $event_post->post_type === 'ep_event') {
         }
     }
 
+    // Combined unique media list for Lightbox Carousel Navigation (SOW 4.1)
+    $all_lightbox_images = [];
+    if (!empty($poster_img)) {
+        $all_lightbox_images[] = $poster_img;
+    }
+    foreach ($gallery_images as $g_url) {
+        if (!in_array($g_url, $all_lightbox_images)) {
+            $all_lightbox_images[] = $g_url;
+        }
+    }
+
     // Retrieve database ticket tiers
     $tiers = eventpass_get_event_tiers($event_id);
     if (empty($tiers)) {
@@ -406,37 +417,144 @@ if ($event_post && $event_post->post_type === 'ep_event') {
         }
     }
     </script>
-    <!-- SOW 4.1: Lightbox Modal for Event Poster & Photo Gallery -->
-    <div id="epLightboxModal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.88); backdrop-filter: blur(5px); align-items: center; justify-content: center; padding: 1.5rem;" onclick="closeLightbox(event)">
-        <button type="button" onclick="closeLightboxDirect()" style="position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(255,255,255,0.25); border: none; color: #fff; width: 44px; height: 44px; border-radius: 50%; font-size: 1.6rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s ease;">&times;</button>
-        <img id="epLightboxImg" src="" alt="Full Preview" style="max-width: 90vw; max-height: 88vh; border-radius: 10px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); object-fit: contain;">
+    <!-- SOW 4.1: Lightbox Modal for Event Poster & Photo Gallery with Navigation -->
+    <div id="epLightboxModal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.92); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 1rem; user-select: none;" onclick="closeLightbox(event)">
+        
+        <!-- Close Button (Top Right) -->
+        <button type="button" onclick="closeLightboxDirect()" aria-label="Close" style="position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35); color: #fff; width: 44px; height: 44px; border-radius: 50%; font-size: 1.6rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; z-index: 100002; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onmouseover="this.style.background='rgba(255,255,255,0.4)';" onmouseout="this.style.background='rgba(255,255,255,0.2)';">&times;</button>
+
+        <!-- Previous Button (Move Backward / Left Arrow) -->
+        <button type="button" id="epLightboxPrev" onclick="epLightboxStep(-1, event)" aria-label="Previous Image" style="position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); background: rgba(15,23,42,0.8); border: 2px solid rgba(255,255,255,0.4); color: #ffffff; width: 54px; height: 54px; border-radius: 50%; font-size: 1.8rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; z-index: 100002; box-shadow: 0 6px 20px rgba(0,0,0,0.6);" onmouseover="this.style.background='var(--ep-teal-dark, #0d9488)'; this.style.borderColor='#fff'; this.style.transform='translateY(-50%) scale(1.1)';" onmouseout="this.style.background='rgba(15,23,42,0.8)'; this.style.borderColor='rgba(255,255,255,0.4)'; this.style.transform='translateY(-50%) scale(1)';">
+            &#10094;
+        </button>
+
+        <!-- Central Image Viewport -->
+        <div style="position: relative; max-width: 86vw; max-height: 85vh; display: flex; align-items: center; justify-content: center;" onclick="event.stopPropagation()">
+            <img id="epLightboxImg" src="" alt="Gallery Preview" style="max-width: 86vw; max-height: 84vh; border-radius: 12px; box-shadow: 0 25px 60px rgba(0,0,0,0.85); object-fit: contain; display: block; transition: opacity 0.2s ease;">
+        </div>
+
+        <!-- Next Button (Move Forward / Right Arrow) -->
+        <button type="button" id="epLightboxNext" onclick="epLightboxStep(1, event)" aria-label="Next Image" style="position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); background: rgba(15,23,42,0.8); border: 2px solid rgba(255,255,255,0.4); color: #ffffff; width: 54px; height: 54px; border-radius: 50%; font-size: 1.8rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; z-index: 100002; box-shadow: 0 6px 20px rgba(0,0,0,0.6);" onmouseover="this.style.background='var(--ep-teal-dark, #0d9488)'; this.style.borderColor='#fff'; this.style.transform='translateY(-50%) scale(1.1)';" onmouseout="this.style.background='rgba(15,23,42,0.8)'; this.style.borderColor='rgba(255,255,255,0.4)'; this.style.transform='translateY(-50%) scale(1)';">
+            &#10095;
+        </button>
+
+        <!-- Bottom Image Counter -->
+        <div id="epLightboxCounter" style="position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); color: #ffffff; padding: 0.4rem 1.25rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 700; border: 1px solid rgba(255,255,255,0.25); letter-spacing: 0.5px; z-index: 100002; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+            1 / 1
+        </div>
     </div>
 
     <script>
-    function openLightbox(url) {
-        var modal = document.getElementById('epLightboxModal');
-        var img = document.getElementById('epLightboxImg');
-        if (modal && img) {
-            img.src = url;
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
+    const epLightboxImages = <?php echo wp_json_encode($all_lightbox_images); ?>;
+    let epLightboxCurIdx = 0;
+
+    function updateLightboxDisplay() {
+        const img = document.getElementById('epLightboxImg');
+        const counter = document.getElementById('epLightboxCounter');
+        const prevBtn = document.getElementById('epLightboxPrev');
+        const nextBtn = document.getElementById('epLightboxNext');
+
+        if (!img || epLightboxImages.length === 0) return;
+
+        img.style.opacity = '0.35';
+        img.src = epLightboxImages[epLightboxCurIdx];
+        img.onload = function() {
+            img.style.opacity = '1';
+        };
+
+        if (counter) {
+            counter.textContent = (epLightboxCurIdx + 1) + ' of ' + epLightboxImages.length;
+        }
+
+        if (prevBtn && nextBtn) {
+            if (epLightboxImages.length <= 1) {
+                prevBtn.style.display = 'none';
+                nextBtn.style.display = 'none';
+                if (counter) counter.style.display = 'none';
+            } else {
+                prevBtn.style.display = 'flex';
+                nextBtn.style.display = 'flex';
+                if (counter) counter.style.display = 'block';
+            }
         }
     }
+
+    function openLightbox(urlOrIdx) {
+        const modal = document.getElementById('epLightboxModal');
+        if (!modal) return;
+
+        if (typeof urlOrIdx === 'number') {
+            epLightboxCurIdx = urlOrIdx;
+        } else if (typeof urlOrIdx === 'string') {
+            const foundIdx = epLightboxImages.indexOf(urlOrIdx);
+            epLightboxCurIdx = foundIdx !== -1 ? foundIdx : 0;
+        } else {
+            epLightboxCurIdx = 0;
+        }
+
+        updateLightboxDisplay();
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function epLightboxStep(dir, e) {
+        if (e) e.stopPropagation();
+        if (epLightboxImages.length <= 1) return;
+        epLightboxCurIdx = (epLightboxCurIdx + dir + epLightboxImages.length) % epLightboxImages.length;
+        updateLightboxDisplay();
+    }
+
     function closeLightboxDirect() {
-        var modal = document.getElementById('epLightboxModal');
+        const modal = document.getElementById('epLightboxModal');
         if (modal) {
             modal.style.display = 'none';
             document.body.style.overflow = '';
         }
     }
+
     function closeLightbox(e) {
         if (e.target.id === 'epLightboxModal') {
             closeLightboxDirect();
         }
     }
+
+    // Keyboard support: ArrowLeft, ArrowRight, Escape
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeLightboxDirect();
+        const modal = document.getElementById('epLightboxModal');
+        if (!modal || modal.style.display !== 'flex') return;
+
+        if (e.key === 'Escape') {
+            closeLightboxDirect();
+        } else if (e.key === 'ArrowLeft') {
+            epLightboxStep(-1);
+        } else if (e.key === 'ArrowRight') {
+            epLightboxStep(1);
+        }
     });
+
+    // Touch swipe support for mobile
+    let epTouchStartX = 0;
+    const epModalEl = document.getElementById('epLightboxModal');
+    if (epModalEl) {
+        epModalEl.addEventListener('touchstart', function(e) {
+            if (e.changedTouches && e.changedTouches[0]) {
+                epTouchStartX = e.changedTouches[0].screenX;
+            }
+        }, { passive: true });
+
+        epModalEl.addEventListener('touchend', function(e) {
+            if (e.changedTouches && e.changedTouches[0]) {
+                const diffX = e.changedTouches[0].screenX - epTouchStartX;
+                if (Math.abs(diffX) > 40) {
+                    if (diffX > 0) {
+                        epLightboxStep(-1); // Swipe right -> Previous
+                    } else {
+                        epLightboxStep(1);  // Swipe left -> Next
+                    }
+                }
+            }
+        }, { passive: true });
+    }
     </script>
 <?php endif; ?>
 
