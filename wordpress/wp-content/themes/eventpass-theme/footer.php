@@ -64,7 +64,14 @@
                     </ul>
                     <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.04); border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
                         <span style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--ep-teal); font-weight: 700; margin-bottom: 0.25rem;">Payment Security</span>
-                        <p style="font-size: 0.8rem; color: #94A3B8; margin: 0;">Verified Namibian Gateway. Visa, Mastercard, EFT & QR.</p>
+                        <p style="font-size: 0.8rem; color: #94A3B8; margin: 0 0 0.5rem;">Bank of Namibia NPS Certified Gateway.</p>
+                        <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                            <span style="display: inline-flex; align-items: center; font-size: 0.7rem; font-weight: 800; background: #0B1B3D; color: #fff; padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2);">VISA</span>
+                            <span style="display: inline-flex; align-items: center; gap: 3px; font-size: 0.7rem; font-weight: 800; background: #1A1A1A; color: #fff; padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2);">
+                                <span style="color: #EB001B;">●</span><span style="color: #F79E1B; margin-left: -5px;">●</span> MASTERCARD
+                            </span>
+                            <span style="font-size: 0.72rem; color: #CBD5E1;">Accepted</span>
+                        </div>
                     </div>
                 </div>
             </div>

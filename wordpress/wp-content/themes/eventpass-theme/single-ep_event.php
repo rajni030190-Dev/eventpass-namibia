@@ -63,6 +63,59 @@ if ($event_post && $event_post->post_type === 'ep_event') {
     $custom_img  = get_post_meta($event_id, '_ep_event_image', true);
     $image       = $thumb_url ?: ($custom_img ?: get_template_directory_uri() . '/assets/images/hero/concert-lights.jpg');
 
+    // SOW 4.1: Poster & Gallery Image Logic
+    $poster_img = get_post_meta($event_id, '_ep_event_poster', true) ?: $image;
+
+    $gallery_meta = get_post_meta($event_id, '_ep_event_gallery', true);
+    $gallery_images = [];
+    if (!empty($gallery_meta)) {
+        if (is_array($gallery_meta)) {
+            $gallery_images = $gallery_meta;
+        } else {
+            $gallery_images = array_filter(array_map('trim', explode(',', $gallery_meta)));
+        }
+    }
+
+    if (empty($gallery_images)) {
+        $attachments = get_attached_media('image', $event_id);
+        foreach ($attachments as $att) {
+            $att_url = wp_get_attachment_image_url($att->ID, 'large');
+            if ($att_url && $att_url !== $poster_img) {
+                $gallery_images[] = $att_url;
+            }
+        }
+    }
+
+    if (empty($gallery_images)) {
+        $theme_uri = get_template_directory_uri();
+        $cat_l = strtolower($category);
+        if (strpos($cat_l, 'music') !== false || strpos($cat_l, 'concert') !== false || strpos($cat_l, 'festival') !== false) {
+            $gallery_images = [
+                $theme_uri . '/assets/images/hero/concert-lights.jpg',
+                $theme_uri . '/assets/images/hero/dj-performance.jpg',
+                $theme_uri . '/assets/images/hero/festival-crowd.jpg',
+            ];
+        } elseif (strpos($cat_l, 'sport') !== false || strpos($cat_l, 'outdoor') !== false) {
+            $gallery_images = [
+                $theme_uri . '/assets/images/hero/sports-stadium.jpg',
+                $theme_uri . '/assets/images/hero/festival-crowd.jpg',
+                $theme_uri . '/assets/images/hero/concert-lights.jpg',
+            ];
+        } elseif (strpos($cat_l, 'business') !== false || strpos($cat_l, 'conference') !== false) {
+            $gallery_images = [
+                $theme_uri . '/assets/images/hero/business-summit.jpg',
+                $theme_uri . '/assets/images/hero/festival-crowd.jpg',
+                $theme_uri . '/assets/images/hero/cultural-night.jpg',
+            ];
+        } else {
+            $gallery_images = [
+                $theme_uri . '/assets/images/hero/cultural-night.jpg',
+                $theme_uri . '/assets/images/hero/festival-crowd.jpg',
+                $theme_uri . '/assets/images/hero/concert-lights.jpg',
+            ];
+        }
+    }
+
     // Retrieve database ticket tiers
     $tiers = eventpass_get_event_tiers($event_id);
     if (empty($tiers)) {
@@ -175,6 +228,40 @@ if ($event_post && $event_post->post_type === 'ep_event') {
                     </div>
                 </div>
 
+                <!-- SOW 4.1: Official Event Poster -->
+                <div style="margin-bottom: 3rem; background: #ffffff; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-lg); padding: 1.75rem; box-shadow: var(--ep-shadow-sm);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                        <div>
+                            <span style="font-size: 0.8rem; text-transform: uppercase; color: var(--ep-teal-dark); font-weight: 700; letter-spacing: 0.5px;">Official Media</span>
+                            <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--ep-navy); margin: 0.2rem 0 0;">Event Poster</h3>
+                        </div>
+                        <button type="button" onclick="openLightbox('<?php echo esc_url($poster_img); ?>')" class="ep-btn ep-btn-outline ep-btn-sm" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; cursor: pointer;">
+                            <span>🔍 View Full Poster</span>
+                        </button>
+                    </div>
+                    <div style="border-radius: 12px; overflow: hidden; background: #0B1B3D; max-height: 480px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(0,0,0,0.06);" onclick="openLightbox('<?php echo esc_url($poster_img); ?>')">
+                        <img src="<?php echo esc_url($poster_img); ?>" alt="<?php echo esc_attr($title); ?> - Official Poster" style="width: 100%; height: auto; max-height: 480px; object-fit: contain; display: block; transition: transform 0.3s ease;">
+                    </div>
+                </div>
+
+                <!-- SOW 4.1: Event Photo Gallery & Highlights -->
+                <div style="margin-bottom: 3rem; background: #ffffff; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-lg); padding: 1.75rem; box-shadow: var(--ep-shadow-sm);">
+                    <div style="margin-bottom: 1.25rem;">
+                        <span style="font-size: 0.8rem; text-transform: uppercase; color: var(--ep-teal-dark); font-weight: 700; letter-spacing: 0.5px;">Visual Experience</span>
+                        <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--ep-navy); margin: 0.2rem 0 0;">Event Gallery & Atmosphere</h3>
+                    </div>
+                    <div class="ep-gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1rem;">
+                        <?php foreach ($gallery_images as $g_idx => $g_img) : ?>
+                            <div style="position: relative; border-radius: 10px; overflow: hidden; aspect-ratio: 4/3; cursor: pointer; border: 1px solid var(--ep-slate-200); box-shadow: var(--ep-shadow-sm); background: #0B1B3D;" onclick="openLightbox('<?php echo esc_url($g_img); ?>')">
+                                <img src="<?php echo esc_url($g_img); ?>" alt="<?php echo esc_attr($title); ?> Gallery Photo" style="width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s ease;">
+                                <div style="position: absolute; inset: 0; background: rgba(11,27,61,0.4); opacity: 0; transition: opacity 0.2s ease; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
+                                    <span style="background: rgba(255,255,255,0.95); color: var(--ep-navy); font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 9999px;">🔍 Zoom Photo</span>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
                 <div style="margin-bottom: 3rem; background: #ffffff; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-lg); padding: 1.75rem; box-shadow: var(--ep-shadow-sm);">
                     <h3 style="font-size: 1.3rem; font-weight: 800; color: var(--ep-navy); margin-bottom: 1.25rem;">Date, Time & Venue Details</h3>
                     <div class="ep-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
@@ -259,6 +346,17 @@ if ($event_post && $event_post->post_type === 'ep_event') {
                     <button type="submit" id="epCheckoutBtn" class="ep-btn ep-btn-primary ep-btn-lg" style="width: 100%; justify-content: center; opacity: 0.5; pointer-events: none;">
                         <span>Proceed to Checkout &rarr;</span>
                     </button>
+
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed var(--ep-slate-200);">
+                        <span style="font-size: 0.72rem; color: #64748B; font-weight: 600;">Payment Methods Accepted</span>
+                        <div style="display: flex; gap: 0.4rem; align-items: center;">
+                            <span style="display: inline-flex; align-items: center; font-size: 0.7rem; font-weight: 800; background: #0B1B3D; color: #fff; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px;">VISA</span>
+                            <span style="display: inline-flex; align-items: center; gap: 3px; font-size: 0.7rem; font-weight: 800; background: #1A1A1A; color: #fff; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px;">
+                                <span style="color: #EB001B;">●</span><span style="color: #F79E1B; margin-left: -5px;">●</span> MASTERCARD
+                            </span>
+                            <span style="font-size: 0.72rem; color: #047857; font-weight: 700;">✓ Instant EFT</span>
+                        </div>
+                    </div>
                 </form>
             </div>
         </div>
@@ -307,6 +405,38 @@ if ($event_post && $event_post->post_type === 'ep_event') {
             }
         }
     }
+    </script>
+    <!-- SOW 4.1: Lightbox Modal for Event Poster & Photo Gallery -->
+    <div id="epLightboxModal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.88); backdrop-filter: blur(5px); align-items: center; justify-content: center; padding: 1.5rem;" onclick="closeLightbox(event)">
+        <button type="button" onclick="closeLightboxDirect()" style="position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(255,255,255,0.25); border: none; color: #fff; width: 44px; height: 44px; border-radius: 50%; font-size: 1.6rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s ease;">&times;</button>
+        <img id="epLightboxImg" src="" alt="Full Preview" style="max-width: 90vw; max-height: 88vh; border-radius: 10px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); object-fit: contain;">
+    </div>
+
+    <script>
+    function openLightbox(url) {
+        var modal = document.getElementById('epLightboxModal');
+        var img = document.getElementById('epLightboxImg');
+        if (modal && img) {
+            img.src = url;
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+    }
+    function closeLightboxDirect() {
+        var modal = document.getElementById('epLightboxModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+    function closeLightbox(e) {
+        if (e.target.id === 'epLightboxModal') {
+            closeLightboxDirect();
+        }
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeLightboxDirect();
+    });
     </script>
 <?php endif; ?>
 

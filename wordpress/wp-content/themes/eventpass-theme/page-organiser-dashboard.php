@@ -170,8 +170,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_create_event_nonce
         $date        = sanitize_text_field($_POST['event_date'] ?? '');
         $desc        = wp_kses_post($_POST['event_description'] ?? '');
         $image       = esc_url_raw($_POST['event_image'] ?? '');
+        $poster      = esc_url_raw($_POST['event_poster'] ?? '');
         if (empty($image)) {
-            $image = get_template_directory_uri() . '/assets/images/hero/concert-lights.jpg';
+            $image = !empty($poster) ? $poster : get_template_directory_uri() . '/assets/images/hero/concert-lights.jpg';
+        }
+        if (empty($poster)) {
+            $poster = $image;
+        }
+
+        // SOW 4.1: Parse Gallery Images
+        $gallery_raw = sanitize_textarea_field($_POST['event_gallery'] ?? '');
+        $gallery_urls = [];
+        if (!empty($gallery_raw)) {
+            $glines = preg_split('/[\r\n,]+/', $gallery_raw);
+            foreach ($glines as $gl) {
+                $curl = esc_url_raw(trim($gl));
+                if (!empty($curl)) $gallery_urls[] = $curl;
+            }
         }
 
         // Strict Structured Event & Gate Time Validation
@@ -279,6 +294,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_create_event_nonce
                 update_post_meta($new_event_id, '_ep_event_date', $date);
                 update_post_meta($new_event_id, '_ep_event_time', $time);
                 update_post_meta($new_event_id, '_ep_event_image', $image);
+                update_post_meta($new_event_id, '_ep_event_poster', $poster);
+                if (!empty($gallery_urls)) {
+                    update_post_meta($new_event_id, '_ep_event_gallery', $gallery_urls);
+                }
                 update_post_meta($new_event_id, '_ep_event_organiser', $current_user->display_name ?: $current_user->user_login);
                 update_post_meta($new_event_id, '_ep_ticket_tiers', $tiers);
                 update_post_meta($new_event_id, '_ep_min_price', $min_price);
@@ -1003,6 +1022,24 @@ get_header();
                 <div>
                     <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.4rem;">Event Description *</label>
                     <textarea name="event_description" rows="3" required placeholder="Describe event highlights..." style="width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 10px; font-size: 0.95rem;"></textarea>
+                </div>
+
+                <!-- SOW 4.1: Event Poster & Photo Gallery Inputs -->
+                <div style="background: #F8FAFC; border: 1px solid var(--ep-slate-200); border-radius: 12px; padding: 1.15rem;">
+                    <div style="margin-bottom: 0.85rem;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">
+                            🖼️ Event Poster Image URL
+                        </label>
+                        <input type="url" name="event_poster" placeholder="https://domain.com.na/poster.jpg (leave blank for default)" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;">
+                        <small style="color: #64748B; font-size: 0.75rem;">Official promotional flyer/poster displayed on the event page.</small>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">
+                            📸 Event Photo Gallery (Multiple URLs, comma or newline separated)
+                        </label>
+                        <textarea name="event_gallery" rows="2" placeholder="https://image1.jpg, https://image2.jpg" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;"></textarea>
+                        <small style="color: #64748B; font-size: 0.75rem;">Atmosphere and highlight photos shown in the Event Gallery grid.</small>
+                    </div>
                 </div>
 
                 <!-- Structured Ticket Tiers -->

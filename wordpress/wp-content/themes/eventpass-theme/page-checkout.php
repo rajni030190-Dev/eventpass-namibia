@@ -1169,6 +1169,15 @@ if ($event && $event->post_type === 'ep_event') {
                                 <p style="font-size: 0.85rem; color: var(--ep-slate-600); margin: 0 0 0.5rem; line-height: 1.5;">
                                     Accepts Visa & Mastercard debit/credit cards issued by Bank Windhoek, FNB Namibia, Standard Bank Namibia, Nedbank Namibia, and international cards.
                                 </p>
+                                <div style="display: flex; gap: 0.5rem; align-items: center; margin: 0.5rem 0;">
+                                    <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 800; background: #0B1B3D; color: #fff; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px;">
+                                        <span style="color: #00B4D8;">💳</span> VISA
+                                    </span>
+                                    <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 800; background: #1A1A1A; color: #fff; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px;">
+                                        <span style="color: #EB001B;">●</span><span style="color: #F79E1B; margin-left: -5px;">●</span> MASTERCARD
+                                    </span>
+                                    <span style="font-size: 0.75rem; color: var(--ep-teal-dark); font-weight: 700;">✓ Accepted</span>
+                                </div>
                                 <span style="font-size: 0.75rem; color: var(--ep-success); font-weight: 700;">✓ Bank of Namibia NPS Authorized • 256-bit TLS Encrypted</span>
                             </div>
                         </label>
@@ -1259,6 +1268,13 @@ if ($event && $event->post_type === 'ep_event') {
                 <div style="margin-top: 1.75rem; background: var(--ep-slate-50); border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-md); padding: 1rem; font-size: 0.8rem; color: #64748B;">
                     <span style="display: block; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">🛡️ Buyer Protection</span>
                     Tickets are issued instantly with verified cryptographic QR codes upon completed checkout.
+                    <div style="display: flex; gap: 0.4rem; align-items: center; margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px dashed var(--ep-slate-200);">
+                        <span style="font-weight: 700; color: var(--ep-navy); font-size: 0.72rem;">Accepted:</span>
+                        <span style="font-size: 0.68rem; font-weight: 800; background: #0B1B3D; color: #fff; padding: 2px 6px; border-radius: 4px;">VISA</span>
+                        <span style="font-size: 0.68rem; font-weight: 800; background: #1A1A1A; color: #fff; padding: 2px 6px; border-radius: 4px;">
+                            <span style="color: #EB001B;">●</span><span style="color: #F79E1B; margin-left: -4px;">●</span> MC
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
