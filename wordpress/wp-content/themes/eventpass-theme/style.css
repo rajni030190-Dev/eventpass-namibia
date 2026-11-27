@@ -99,7 +99,7 @@ img {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
+  height: 68px;
 }
 
 .ep-logo-link img {
@@ -1348,7 +1348,7 @@ img {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            height: 64px;
+            height: 68px;
             position: relative;
         }
         .ep-logo-link img {
@@ -1538,10 +1538,10 @@ img {
         }
         @media (max-width: 990px) {
             .ep-header-inner {
-                height: 58px;
+                height: 60px;
             }
             .ep-logo-link img {
-                height: 40px;
+                height: 38px;
             }
             .ep-desktop-nav {
                 display: none !important;
@@ -1560,10 +1560,10 @@ img {
         }
         @media (max-width: 480px) {
             .ep-header-inner {
-                height: 54px;
+                height: 56px;
             }
             .ep-logo-link img {
-                height: 38px;
+                height: 34px;
             }
             .ep-mobile-nav-link {
                 padding: 0.75rem 1.25rem;

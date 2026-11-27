@@ -39,6 +39,11 @@
     <meta name="twitter:title" content="<?php echo esc_attr($ep_og_title); ?>">
     <meta name="twitter:description" content="<?php echo esc_attr($ep_og_desc); ?>">
     <meta name="twitter:image" content="<?php echo esc_url($ep_og_image); ?>">
+    <!-- Favicon & Site Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo esc_url(get_template_directory_uri() . '/assets/images/favicon-32x32.png'); ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo esc_url(get_template_directory_uri() . '/assets/images/favicon-16x16.png'); ?>">
+    <link rel="shortcut icon" href="<?php echo esc_url(get_template_directory_uri() . '/assets/images/favicon.ico'); ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo esc_url(get_template_directory_uri() . '/assets/images/apple-touch-icon.png'); ?>">
     <?php wp_head(); ?>
 </head>
 <body <?php body_class(); ?>>
@@ -72,7 +77,7 @@
         <div class="container ep-header-inner">
             <div class="ep-header-brand">
                 <a href="<?php echo esc_url(home_url('/')); ?>" class="ep-logo-link">
-                    <img src="<?php echo esc_url(get_template_directory_uri() . '/assets/images/logo.png?v=1.0.5'); ?>" alt="EventPass Namibia - Every Event. One Pass.">
+                    <img src="<?php echo esc_url(get_template_directory_uri() . '/assets/images/logo.png'); ?>" alt="EventPass Namibia - Every Event. One Pass.">
                 </a>
             </div>
 

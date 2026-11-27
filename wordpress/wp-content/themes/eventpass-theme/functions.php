@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
 
-define('EVENTPASS_THEME_VERSION', '1.0.5');
+define('EVENTPASS_THEME_VERSION', '1.0.4');
 define('EVENTPASS_THEME_DIR', get_template_directory());
 define('EVENTPASS_THEME_URI', get_template_directory_uri());
 
@@ -161,3 +161,18 @@ add_filter('show_admin_bar', function( $show ) {
     }
     return $show;
 });
+
+// 3. Custom Favicon & Site Icon hooks for admin, and login screens
+function eventpass_output_site_favicon() {
+    $img_dir = get_template_directory_uri() . '/assets/images/';
+    echo '<link rel="icon" type="image/png" sizes="32x32" href="' . esc_url($img_dir . 'favicon-32x32.png') . '">' . "\n";
+    echo '<link rel="icon" type="image/png" sizes="16x16" href="' . esc_url($img_dir . 'favicon-16x16.png') . '">' . "\n";
+    echo '<link rel="shortcut icon" href="' . esc_url($img_dir . 'favicon.ico') . '">' . "\n";
+    echo '<link rel="apple-touch-icon" sizes="180x180" href="' . esc_url($img_dir . 'apple-touch-icon.png') . '">' . "\n";
+}
+add_action('admin_head', 'eventpass_output_site_favicon', 1);
+add_action('login_head', 'eventpass_output_site_favicon', 1);
+
+add_filter('get_site_icon_url', function( $url, $size = 512, $blog_id = 0 ) {
+    return get_template_directory_uri() . '/assets/images/favicon-32x32.png';
+}, 99, 3);
