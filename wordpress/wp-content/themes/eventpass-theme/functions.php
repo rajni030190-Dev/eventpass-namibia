@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
 
-define('EVENTPASS_THEME_VERSION', '1.0.4');
+define('EVENTPASS_THEME_VERSION', '1.0.5');
 define('EVENTPASS_THEME_DIR', get_template_directory());
 define('EVENTPASS_THEME_URI', get_template_directory_uri());
 
