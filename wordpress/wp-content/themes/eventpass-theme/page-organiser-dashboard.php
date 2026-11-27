@@ -333,6 +333,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_edit_event_nonce']
         $date        = sanitize_text_field($_POST['edit_event_date'] ?? '');
         $desc        = wp_kses_post($_POST['edit_event_description'] ?? '');
 
+        // SOW 4.1: Poster & Gallery Updates for Edit
+        $edit_poster      = esc_url_raw($_POST['edit_event_poster'] ?? '');
+        $edit_gallery_raw = sanitize_textarea_field($_POST['edit_event_gallery'] ?? '');
+        $edit_gallery_urls = [];
+        if (!empty($edit_gallery_raw)) {
+            $split = preg_split('/[\r\n,]+/', $edit_gallery_raw);
+            foreach ($split as $u) {
+                $u = trim($u);
+                if (!empty($u) && filter_var($u, FILTER_VALIDATE_URL)) {
+                    $edit_gallery_urls[] = esc_url_raw($u);
+                }
+            }
+        }
+
         // Strict Structured Event & Gate Time Validation for Edit
         $edit_gate_time  = sanitize_text_field($_POST['edit_gate_time'] ?? '');
         $edit_start_time = sanitize_text_field($_POST['edit_start_time'] ?? '');
@@ -369,6 +383,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ep_edit_event_nonce']
             update_post_meta($edit_event_id, '_ep_event_town', $town);
             update_post_meta($edit_event_id, '_ep_event_date', $date);
             update_post_meta($edit_event_id, '_ep_event_time', $time);
+            update_post_meta($edit_event_id, '_ep_event_poster', $edit_poster);
+            update_post_meta($edit_event_id, '_ep_event_gallery', $edit_gallery_urls);
+            if (!empty($edit_poster) && empty(get_post_meta($edit_event_id, '_ep_event_image', true))) {
+                update_post_meta($edit_event_id, '_ep_event_image', $edit_poster);
+            }
 
             // Dynamic Ticket Tiers Updates
             $existing_tiers = get_post_meta($edit_event_id, '_ep_ticket_tiers', true);
@@ -690,6 +709,9 @@ get_header();
                                     <?php
                                     $ev_cat_slug = (!empty($terms) && !is_wp_error($terms)) ? $terms[0]->slug : '';
                                     $ev_time = get_post_meta($ev_id, '_ep_event_time', true) ?: '18:00 - 02:00 CAT';
+                                    $ev_poster = get_post_meta($ev_id, '_ep_event_poster', true) ?: '';
+                                    $ev_gallery = get_post_meta($ev_id, '_ep_event_gallery', true) ?: [];
+                                    $ev_gallery_str = is_array($ev_gallery) ? implode(", ", $ev_gallery) : '';
                                     $ev_desc = get_post_field('post_content', $ev_id);
                                     $gen_tier = $ev_tiers['general'] ?? [];
                                     $vip_tier = $ev_tiers['vip'] ?? [];
@@ -702,6 +724,8 @@ get_header();
                                         'venue'       => $ev_venue,
                                         'date'        => $ev_date,
                                         'time'        => $ev_time,
+                                        'poster'      => $ev_poster,
+                                        'gallery'     => $ev_gallery_str,
                                         'desc'        => $ev_desc,
                                         'nonce'       => wp_create_nonce('ep_edit_event_action_' . $ev_id),
                                         'gen_price'   => $gen_tier['price'] ?? 150,
@@ -1170,6 +1194,24 @@ get_header();
                     <textarea name="edit_event_description" id="edit_event_description" rows="3" required style="width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--ep-slate-200); border-radius: 10px; font-size: 0.95rem;"></textarea>
                 </div>
 
+                <!-- SOW 4.1: Event Poster & Photo Gallery Inputs for Edit -->
+                <div style="background: #F8FAFC; border: 1px solid var(--ep-slate-200); border-radius: 12px; padding: 1.15rem;">
+                    <div style="margin-bottom: 0.85rem;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">
+                            🖼️ Event Poster Image URL
+                        </label>
+                        <input type="url" name="edit_event_poster" id="edit_event_poster" placeholder="https://domain.com.na/poster.jpg" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;">
+                        <small style="color: #64748B; font-size: 0.75rem;">Official promotional flyer/poster displayed on the event page.</small>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--ep-navy); margin-bottom: 0.35rem;">
+                            📸 Event Photo Gallery (Multiple URLs, comma or newline separated)
+                        </label>
+                        <textarea name="edit_event_gallery" id="edit_event_gallery" rows="2" placeholder="https://image1.jpg, https://image2.jpg" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--ep-slate-200); border-radius: 8px; font-size: 0.92rem; background: #fff;"></textarea>
+                        <small style="color: #64748B; font-size: 0.75rem;">Atmosphere and highlight photos shown in the Event Gallery grid.</small>
+                    </div>
+                </div>
+
                 <!-- Structured Ticket Tiers -->
                 <div style="background: var(--ep-slate-50); border: 1px solid var(--ep-slate-200); border-radius: 12px; padding: 1.25rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
@@ -1308,6 +1350,12 @@ function openEditEventModal(data) {
     }
 
     document.getElementById('edit_event_description').value = data.desc;
+    if (document.getElementById('edit_event_poster')) {
+        document.getElementById('edit_event_poster').value = data.poster || '';
+    }
+    if (document.getElementById('edit_event_gallery')) {
+        document.getElementById('edit_event_gallery').value = data.gallery || '';
+    }
 
     document.getElementById('edit_tier_gen_price').value = data.gen_price;
     document.getElementById('edit_tier_gen_qty').value = data.gen_qty;
