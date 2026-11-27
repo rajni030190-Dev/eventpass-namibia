@@ -123,7 +123,7 @@ get_header();
             Can't find the answer you're looking for? Reach out to our customer care team on WhatsApp or send an email.
         </p>
         <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-            <a href="https://wa.me/264819200000" target="_blank" class="ep-whatsapp-btn">
+            <a href="https://wa.me/264857183414" target="_blank" class="ep-whatsapp-btn">
                 <span>💬 Message on WhatsApp</span>
             </a>
             <a href="<?php echo esc_url(home_url('/contact-us')); ?>" class="ep-btn ep-btn-primary">

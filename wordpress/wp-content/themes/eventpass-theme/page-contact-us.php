@@ -131,8 +131,8 @@ get_header();
                 <p style="color: #CBD5E1; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.25rem;">
                     Need urgent ticket re-send or assistance at the gate? Message our standby desk on WhatsApp.
                 </p>
-                <a href="https://wa.me/264819200000" target="_blank" class="ep-whatsapp-btn">
-                    <span>💬 Chat on WhatsApp (+264 81 920 0000)</span>
+                <a href="https://wa.me/264857183414" target="_blank" class="ep-whatsapp-btn">
+                    <span>💬 Chat on WhatsApp (+264 85 718 3414)</span>
                 </a>
             </div>
 
@@ -161,7 +161,7 @@ get_header();
                 <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(11,27,61,0.08); color: var(--ep-navy); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;">📍</div>
                 <div>
                     <h4 style="font-size: 1.1rem; font-weight: 800; color: var(--ep-navy); margin-bottom: 0.25rem;">Windhoek Operations Office</h4>
-                    <p style="color: #64748B; font-size: 0.88rem; margin: 0 0 0.4rem;">Maerua Mall Office Park, Jan Jonker Road, Windhoek, Namibia.</p>
+                    <p style="color: #64748B; font-size: 0.88rem; margin: 0 0 0.4rem;">Mandume Ndemufayo Avenue, Windhoek, Namibia (Operations Office).</p>
                     <div style="font-size: 0.82rem; color: #475569; font-weight: 600;">Mon - Fri: 08:00 - 18:00 CAT | Event Days: 08:00 - 02:00 CAT</div>
                 </div>
             </div>

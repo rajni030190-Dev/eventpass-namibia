@@ -12,6 +12,10 @@
                         <strong>Every Event. One Pass.</strong><br>
                         Discover exciting events, book tickets online and experience more of Namibia. From music festivals and sports to executive business conferences.
                     </p>
+                    <div style="margin-top: 1rem; font-size: 0.85rem; color: #CBD5E1; line-height: 1.6;">
+                        <div style="margin-bottom: 0.35rem;">📍 <strong>Operations Office:</strong> Mandume Ndemufayo Avenue, Windhoek</div>
+                        <div>💬 <strong>WhatsApp:</strong> <a href="https://wa.me/264857183414" target="_blank" rel="noopener" style="color: var(--ep-teal); text-decoration: none; font-weight: 600;">+264 85 718 3414</a></div>
+                    </div>
                     <div class="ep-footer-social" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
                         <a href="https://facebook.com" target="_blank" rel="noopener" style="color: #94A3B8; font-size: 0.9rem;">Facebook</a>
                         <span style="color: rgba(255,255,255,0.2);">•</span>
