@@ -59,6 +59,16 @@ if ($event_post && $event_post->post_type === 'ep_event') {
     $org_name    = get_post_meta($event_id, '_ep_event_organizer_name', true) ?: (get_post_meta($event_id, '_ep_event_organiser', true) ?: get_the_author_meta('display_name', $event_post->post_author));
     $org_contact = get_post_meta($event_id, '_ep_event_organizer_email', true) ?: (get_post_meta($event_id, '_ep_event_contact', true) ?: 'events@eventpass.com.na');
 
+    // SOW 4.1: Ticket Sales Closing Date
+    $closing_meta = get_post_meta($event_id, '_ep_sales_closing_date', true);
+    if (!empty($closing_meta)) {
+        $sales_closing_date = date('d M Y, H:i', strtotime($closing_meta)) . ' CAT';
+    } elseif (!empty($date_meta) && strtotime($date_meta)) {
+        $sales_closing_date = date('d M Y', strtotime($date_meta)) . ' at 18:00 CAT (or until sold out)';
+    } else {
+        $sales_closing_date = 'Closing on event day at gate opening (or until sold out)';
+    }
+
     $thumb_url   = get_the_post_thumbnail_url($event_id, 'full');
     $custom_img  = get_post_meta($event_id, '_ep_event_image', true);
     $image       = $thumb_url ?: ($custom_img ?: get_template_directory_uri() . '/assets/images/hero/concert-lights.jpg');
@@ -289,17 +299,55 @@ if ($event_post && $event_post->post_type === 'ep_event') {
                     </div>
                 </div>
 
+                <!-- SOW 4.1: Event Organiser Information -->
                 <div style="background: #ffffff; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-lg); padding: 1.75rem; box-shadow: var(--ep-shadow-sm);">
-                    <h3 style="font-size: 1.3rem; font-weight: 800; color: var(--ep-navy); margin-bottom: 1rem;">Organiser & Support</h3>
-                    <strong style="color: var(--ep-navy); font-size: 1.05rem; display: block; margin-bottom: 0.25rem;"><?php echo esc_html($org_name); ?></strong>
-                    <span style="font-size: 0.9rem; color: var(--ep-slate-600); display: block;">Official Contact: <?php echo esc_html($org_contact); ?></span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                        <div>
+                            <span style="font-size: 0.8rem; text-transform: uppercase; color: var(--ep-teal-dark); font-weight: 700; letter-spacing: 0.5px;">Hosted By</span>
+                            <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--ep-navy); margin: 0.2rem 0 0;">Event Organiser Information</h3>
+                        </div>
+                        <span style="background: #ECFDF5; color: #047857; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 999px; border: 1px solid #A7F3D0; display: inline-flex; align-items: center; gap: 4px;">
+                            ✓ Verified Organiser
+                        </span>
+                    </div>
+
+                    <div style="display: flex; gap: 1.15rem; align-items: center;">
+                        <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--ep-navy) 0%, var(--ep-teal-dark) 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; flex-shrink: 0; box-shadow: 0 4px 12px rgba(11,27,61,0.18);">
+                            <?php echo esc_html(strtoupper(substr($org_name, 0, 1))); ?>
+                        </div>
+                        <div style="flex: 1;">
+                            <strong style="color: var(--ep-navy); font-size: 1.15rem; display: block; line-height: 1.2; margin-bottom: 0.35rem;">
+                                <?php echo esc_html($org_name); ?>
+                            </strong>
+                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; font-size: 0.88rem; color: var(--ep-slate-600);">
+                                <span>Official Host Support:</span>
+                                <a href="mailto:<?php echo esc_attr($org_contact); ?>" style="color: var(--ep-teal-dark); font-weight: 600; text-decoration: underline;">
+                                    <?php echo esc_html($org_contact); ?>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--ep-slate-100); display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #64748B;">
+                        <span>🛡️ Protected by EventPass Buyer Guarantee</span>
+                        <span>Namibia NPS Compliant</span>
+                    </div>
                 </div>
             </div>
 
             <!-- Right Column: Interactive Ticket Selection -->
             <div style="background: #ffffff; border: 1px solid var(--ep-slate-200); border-radius: var(--ep-radius-lg); padding: 2rem; box-shadow: var(--ep-shadow-lg); position: sticky; top: 100px;">
                 <h3 style="font-size: 1.45rem; font-weight: 800; color: var(--ep-navy); margin-bottom: 0.5rem;">Select Your Passes</h3>
-                <p style="font-size: 0.88rem; color: var(--ep-slate-600); margin-bottom: 1.5rem;">Passes are issued with unique, contactless QR codes upon booking.</p>
+                <p style="font-size: 0.88rem; color: var(--ep-slate-600); margin-bottom: 0.85rem;">Passes are issued with unique, contactless QR codes upon booking.</p>
+
+                <!-- SOW 4.1: Ticket Sales Closing Date -->
+                <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px; padding: 0.65rem 0.9rem; margin-bottom: 1.35rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.83rem; color: #92400E;">
+                    <span style="font-size: 1.1rem; line-height: 1;">⏳</span>
+                    <div>
+                        <strong style="color: #78350F; display: block;">Ticket Sales Closing:</strong>
+                        <span><?php echo esc_html($sales_closing_date); ?></span>
+                    </div>
+                </div>
 
                 <form id="epBookingForm" action="<?php echo esc_url(home_url('/checkout')); ?>" method="POST">
                     <input type="hidden" name="event_id" value="<?php echo esc_attr($event_id); ?>">
@@ -369,6 +417,56 @@ if ($event_post && $event_post->post_type === 'ep_event') {
                         </div>
                     </div>
                 </form>
+
+                <!-- SOW 4.1: Social Media Sharing Functionality -->
+                <?php
+                $share_url   = rawurlencode(get_permalink($event_id));
+                $share_title = rawurlencode('Check out ' . $title . ' on EventPass Namibia!');
+                ?>
+                <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--ep-slate-200);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <span style="font-size: 0.78rem; text-transform: uppercase; color: #64748B; font-weight: 700; letter-spacing: 0.5px;">
+                            📢 Share This Event
+                        </span>
+                        <span style="font-size: 0.72rem; color: var(--ep-teal-dark); font-weight: 600;">Tell Friends</span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <!-- WhatsApp Share (Dominant in Namibia) -->
+                        <a href="https://api.whatsapp.com/send?text=<?php echo $share_title . '%20' . $share_url; ?>" target="_blank" rel="noopener noreferrer" style="background: #25D366; color: #ffffff; text-decoration: none; padding: 0.55rem 0.65rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.969.586 1.861.947 3.018.947 3.181 0 5.767-2.587 5.768-5.766.001-3.182-2.585-5.768-5.766-5.768zm0 10.366c-.98 0-1.782-.298-2.548-.773l-.182-.108-1.579.414.421-1.54-.118-.188c-.521-.83-.797-1.56-.796-2.404.001-2.476 2.014-4.489 4.49-4.489 2.476 0 4.49 2.013 4.49 4.489-.001 2.476-2.014 4.489-4.49 4.489zm4.015-3.344c-.22-.11-1.303-.643-1.505-.716-.202-.073-.349-.11-.496.11-.147.22-.57 0.716-.698.863-.129.147-.257.165-.477.055s-.93-.343-1.771-1.093c-.655-.584-1.097-1.306-1.226-1.526-.128-.22-.014-.339.096-.449.099-.099.22-.257.33-.385.11-.128.147-.22.22-.367.073-.147.037-.275-.018-.385s-.496-1.193-.679-1.635c-.179-.43-.361-.371-.496-.378l-.422-.007c-.147 0-.385.055-.587.275s-.771.753-.771 1.836.789 2.129.899 2.276c.11.147 1.553 2.371 3.762 3.324.526.227.936.363 1.256.465.528.168 1.009.144 1.389.088.424-.063 1.303-.533 1.487-1.047.183-.514.183-.955.128-1.047-.055-.092-.202-.147-.422-.257z"/></svg>
+                            WhatsApp
+                        </a>
+
+                        <!-- Facebook Share -->
+                        <a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo $share_url; ?>" target="_blank" rel="noopener noreferrer" style="background: #1877F2; color: #ffffff; text-decoration: none; padding: 0.55rem 0.65rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                            Facebook
+                        </a>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <!-- X (Twitter) -->
+                        <a href="https://twitter.com/intent/tweet?url=<?php echo $share_url; ?>&text=<?php echo $share_title; ?>" target="_blank" rel="noopener noreferrer" style="background: #0F172A; color: #ffffff; text-decoration: none; padding: 0.55rem 0.65rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                            Post to X
+                        </a>
+
+                        <!-- Copy Link -->
+                        <button type="button" onclick="epCopyEventLink(this)" style="background: var(--ep-slate-100); border: 1px solid var(--ep-slate-200); color: var(--ep-navy); padding: 0.55rem 0.65rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; transition: background 0.15s ease;">
+                            🔗 <span id="copyLinkText">Copy Link</span>
+                        </button>
+                    </div>
+
+                    <!-- SOW 4.1: Event Terms & Conditions & Refund Policy -->
+                    <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px dashed var(--ep-slate-200); display: flex; justify-content: space-between; font-size: 0.74rem; color: #64748B;">
+                        <a href="<?php echo esc_url(home_url('/terms-conditions')); ?>" target="_blank" style="color: #64748B; text-decoration: underline;">Event Terms</a>
+                        <span>•</span>
+                        <a href="<?php echo esc_url(home_url('/refund-cancellation')); ?>" target="_blank" style="color: #64748B; text-decoration: underline;">Refund Policy</a>
+                        <span>•</span>
+                        <a href="<?php echo esc_url(home_url('/contact-us')); ?>" target="_blank" style="color: #64748B; text-decoration: underline;">Support</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -554,6 +652,24 @@ if ($event_post && $event_post->post_type === 'ep_event') {
                 }
             }
         }, { passive: true });
+    }
+
+    function epCopyEventLink(btn) {
+        const textSpan = document.getElementById('copyLinkText');
+        if (navigator.clipboard && window.location.href) {
+            navigator.clipboard.writeText(window.location.href).then(function() {
+                if (textSpan) {
+                    textSpan.textContent = '✓ Copied!';
+                    setTimeout(function() {
+                        textSpan.textContent = 'Copy Link';
+                    }, 2500);
+                }
+            }).catch(function() {
+                prompt('Copy this link:', window.location.href);
+            });
+        } else {
+            prompt('Copy this link:', window.location.href);
+        }
     }
     </script>
 <?php endif; ?>
