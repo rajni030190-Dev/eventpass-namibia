@@ -173,12 +173,12 @@ $db_categories = function_exists('eventpass_get_event_categories') ? eventpass_g
         </div>
 
         <!-- Featured Event Cards Grid -->
-        <div class="ep-event-grid">
+        <div class="ep-event-grid ep-event-grid-4">
             <?php
             $featured_query = new WP_Query([
                 'post_type'      => 'ep_event',
                 'post_status'    => 'publish',
-                'posts_per_page' => 3,
+                'posts_per_page' => 4,
                 'orderby'        => 'date',
                 'order'          => 'DESC',
             ]);

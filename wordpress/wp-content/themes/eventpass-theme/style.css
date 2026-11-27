@@ -546,8 +546,28 @@ img {
 /* Eye-Catching Modern Event Grid & Cards */
 .ep-event-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.75rem;
+}
+
+.ep-event-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+  .ep-event-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .ep-event-grid-4 {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
 }
 
 .ep-event-card {
