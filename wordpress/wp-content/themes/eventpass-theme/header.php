@@ -72,7 +72,7 @@
         <div class="container ep-header-inner">
             <div class="ep-header-brand">
                 <a href="<?php echo esc_url(home_url('/')); ?>" class="ep-logo-link">
-                    <img src="<?php echo esc_url(get_template_directory_uri() . '/assets/images/logo.png'); ?>" alt="EventPass Namibia - Every Event. One Pass.">
+                    <img src="<?php echo esc_url(get_template_directory_uri() . '/assets/images/logo.png?v=1.0.5'); ?>" alt="EventPass Namibia - Every Event. One Pass.">
                 </a>
             </div>
 
